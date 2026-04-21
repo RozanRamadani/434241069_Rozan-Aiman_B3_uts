@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
+import 'package:tiketdotcom/core/theme/app_theme.dart';
 import '../../domain/repositories/ticket_repository.dart';
 import '../bloc/ticket_bloc.dart';
 import '../bloc/ticket_event.dart';
 import '../bloc/ticket_state.dart';
 import 'ticket_detail_page.dart';
 import '../../../../core/widgets/shimmer_loading.dart';
+import 'notification_page.dart';
 
 class TicketListPage extends StatefulWidget {
   const TicketListPage({super.key});
@@ -30,55 +33,91 @@ class _TicketListPageState extends State<TicketListPage> {
     return DefaultTabController(
       length: 3,
       child: Scaffold(
+        backgroundColor: AppTheme.background,
         appBar: AppBar(
-          title: const Text('Daftar Tiket'),
-          bottom: PreferredSize(
-            preferredSize: const Size.fromHeight(110),
-            child: Column(
-              children: [
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-                  child: TextField(
-                    controller: _searchController,
-                    decoration: InputDecoration(
-                      hintText: 'Cari judul tiket...',
-                      prefixIcon: const Icon(Icons.search),
-                      suffixIcon: _searchQuery.isNotEmpty 
-                        ? IconButton(icon: const Icon(Icons.clear), onPressed: () {
-                            _searchController.clear();
-                            setState(() => _searchQuery = '');
-                          }) 
-                        : null,
-                      contentPadding: const EdgeInsets.symmetric(vertical: 0),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                    ),
-                    onChanged: (value) => setState(() => _searchQuery = value.toLowerCase()),
-                  ),
-                ),
-                const TabBar(
-                  tabs: [
-                    Tab(text: 'Aktif'),
-                    Tab(text: 'Selesai'),
-                    Tab(text: 'Dibatalkan'),
-                  ],
-                ),
-              ],
-            ),
+          automaticallyImplyLeading: false,
+          toolbarHeight: 70,
+          title: Row(
+            children: [
+              Container(
+                width: 40, height: 40,
+                decoration: BoxDecoration(color: const Color(0xFF1E293B), borderRadius: BorderRadius.circular(12)),
+                child: const Icon(Icons.domain_rounded, color: Colors.white, size: 20),
+              ),
+              const SizedBox(width: 12),
+              Text('Helpdesk UNAIR', style: GoogleFonts.plusJakartaSans(fontSize: 18, fontWeight: FontWeight.w800, color: AppTheme.primaryDark)),
+            ],
           ),
+          actions: [
+            IconButton(
+              icon: Icon(Icons.notifications_rounded, color: AppTheme.primary, size: 28),
+              onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const NotificationPage())),
+            ),
+            const SizedBox(width: 8),
+          ],
         ),
-        body: TabBarView(
+        body: Column(
           children: [
-            BlocProvider(
-              create: (context) => TicketBloc(ticketRepository: context.read<TicketRepository>()),
-              child: _TicketListContent(statusFilter: 'Aktif', searchQuery: _searchQuery),
+            // Search & Tabs
+            Container(
+              color: AppTheme.background,
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              child: Column(
+                children: [
+                  // Search bar
+                  Container(
+                    height: 48,
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(AppTheme.radiusPill)),
+                    child: Row(
+                      children: [
+                        Icon(Icons.search_rounded, color: AppTheme.textMuted, size: 20),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: TextField(
+                            controller: _searchController,
+                            decoration: InputDecoration(
+                              hintText: 'Cari tiket bantuan...',
+                              hintStyle: TextStyle(color: AppTheme.textMuted, fontSize: 13),
+                              border: InputBorder.none, enabledBorder: InputBorder.none, focusedBorder: InputBorder.none,
+                              contentPadding: const EdgeInsets.only(bottom: 12), // align with icon
+                            ),
+                            onChanged: (v) => setState(() => _searchQuery = v.toLowerCase()),
+                          ),
+                        ),
+                        if (_searchQuery.isNotEmpty)
+                          IconButton(icon: const Icon(Icons.clear_rounded, size: 18), padding: EdgeInsets.zero, constraints: const BoxConstraints(), onPressed: () { _searchController.clear(); setState(() => _searchQuery = ''); })
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  // Tabs
+                  Container(
+                    height: 44,
+                    decoration: BoxDecoration(color: AppTheme.inputFill, borderRadius: BorderRadius.circular(12)),
+                    child: TabBar(
+                      indicator: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12), boxShadow: AppTheme.softShadow),
+                      labelColor: AppTheme.primaryDark,
+                      unselectedLabelColor: AppTheme.textSecondary,
+                      labelStyle: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w700, fontSize: 13),
+                      unselectedLabelStyle: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w600, fontSize: 13),
+                      indicatorSize: TabBarIndicatorSize.tab,
+                      dividerColor: Colors.transparent,
+                      tabs: const [Tab(text: 'Aktif'), Tab(text: 'Selesai'), Tab(text: 'Dibatalkan')],
+                    ),
+                  ),
+                ],
+              ),
             ),
-            BlocProvider(
-              create: (context) => TicketBloc(ticketRepository: context.read<TicketRepository>()),
-              child: _TicketListContent(statusFilter: 'Selesai', searchQuery: _searchQuery),
-            ),
-            BlocProvider(
-              create: (context) => TicketBloc(ticketRepository: context.read<TicketRepository>()),
-              child: _TicketListContent(statusFilter: 'Dibatalkan', searchQuery: _searchQuery),
+            // Tab Views
+            Expanded(
+              child: TabBarView(
+                children: [
+                  BlocProvider(create: (c) => TicketBloc(ticketRepository: c.read<TicketRepository>()), child: _TicketTab(statusFilter: 'Aktif', searchQuery: _searchQuery)),
+                  BlocProvider(create: (c) => TicketBloc(ticketRepository: c.read<TicketRepository>()), child: _TicketTab(statusFilter: 'Selesai', searchQuery: _searchQuery)),
+                  BlocProvider(create: (c) => TicketBloc(ticketRepository: c.read<TicketRepository>()), child: _TicketTab(statusFilter: 'Dibatalkan', searchQuery: _searchQuery)),
+                ],
+              ),
             ),
           ],
         ),
@@ -87,20 +126,24 @@ class _TicketListPageState extends State<TicketListPage> {
   }
 }
 
-class _TicketListContent extends StatefulWidget {
+class _TicketTab extends StatefulWidget {
   final String statusFilter;
   final String searchQuery;
-  const _TicketListContent({required this.statusFilter, required this.searchQuery});
+  const _TicketTab({required this.statusFilter, required this.searchQuery});
 
   @override
-  State<_TicketListContent> createState() => _TicketListContentState();
+  State<_TicketTab> createState() => _TicketTabState();
 }
 
-class _TicketListContentState extends State<_TicketListContent> {
+class _TicketTabState extends State<_TicketTab> {
   @override
   void initState() {
     super.initState();
     context.read<TicketBloc>().add(FetchTickets(statusFilter: widget.statusFilter));
+  }
+
+  String _formatDate(DateTime time) {
+    return DateFormat('dd MMM yyyy').format(time);
   }
 
   @override
@@ -109,104 +152,110 @@ class _TicketListContentState extends State<_TicketListContent> {
       builder: (context, state) {
         if (state is TicketLoading) {
           return ListView.separated(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
             itemCount: 5,
-            separatorBuilder: (_, _) => const SizedBox(height: 12),
-            itemBuilder: (_, _) => ShimmerLoading.rounded(height: 100),
+            separatorBuilder: (_, i) => const SizedBox(height: 16),
+            itemBuilder: (_, i) => ShimmerLoading.rounded(height: 120),
           );
         }
-        
-        if (state is TicketsLoaded) {
-          final filteredTickets = state.tickets.where((t) {
-            return t.title.toLowerCase().contains(widget.searchQuery);
-          }).toList();
 
-          if (filteredTickets.isEmpty) {
+        if (state is TicketsLoaded) {
+          final filtered = state.tickets.where((t) => t.title.toLowerCase().contains(widget.searchQuery)).toList();
+
+          if (filtered.isEmpty) {
             return Center(
-              child: Text(widget.searchQuery.isEmpty ? 'Tidak ada tiket.' : 'Tiket tidak ditemukan.'),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(widget.searchQuery.isEmpty ? Icons.inbox_rounded : Icons.search_off_rounded, size: 56, color: Colors.grey[300]),
+                  const SizedBox(height: 12),
+                  Text(widget.searchQuery.isEmpty ? 'Tidak ada tiket.' : 'Tiket tidak ditemukan.', style: TextStyle(color: AppTheme.textMuted)),
+                ],
+              ),
             );
           }
 
           return RefreshIndicator(
             onRefresh: () async => context.read<TicketBloc>().add(FetchTickets(statusFilter: widget.statusFilter)),
             child: ListView.separated(
-              padding: const EdgeInsets.all(16),
-              itemCount: filteredTickets.length,
-              separatorBuilder: (context, index) => const SizedBox(height: 12),
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 100),
+              itemCount: filtered.length,
+              separatorBuilder: (_, i) => const SizedBox(height: 16),
               itemBuilder: (context, index) {
-                final ticket = filteredTickets[index];
-                final statusColor = widget.statusFilter == 'Selesai' ? Colors.green : 
-                                    widget.statusFilter == 'Dibatalkan' ? Colors.red : Colors.orange;
+                final ticket = filtered[index];
+                final statusColor = AppTheme.statusColor(ticket.status);
+                final statusBg = AppTheme.statusBgColor(ticket.status);
+                final shortId = '#TK-${ticket.id.length >= 5 ? ticket.id.substring(ticket.id.length - 5) : ticket.id}';
+                
+                String displayStatus = ticket.status.toUpperCase();
+                if (ticket.status == 'Menunggu Antrean') displayStatus = 'DALAM ANTREAN';
 
-                return Card(
-                  elevation: 0,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    side: BorderSide(color: Colors.grey.shade200),
-                  ),
-                  child: ListTile(
-                    contentPadding: const EdgeInsets.all(16),
-                    leading: CircleAvatar(
-                      backgroundColor: statusColor.withValues(alpha: 0.1),
-                      child: Icon(
-                        widget.statusFilter == 'Aktif' ? Icons.pending_actions_rounded : 
-                        widget.statusFilter == 'Selesai' ? Icons.check_circle_outline : 
-                        Icons.cancel_outlined,
-                        color: statusColor,
+                // Blue line effect for active tickets like reference
+                final bool isActive = ticket.status != 'Selesai' && ticket.status != 'Dibatalkan';
+
+                return Stack(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(24),
+                        boxShadow: AppTheme.cardShadow,
+                      ),
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(24),
+                        onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => TicketDetailPage(
+                          ticketId: ticket.id, title: ticket.title, description: ticket.description,
+                          category: ticket.category, status: ticket.status, statusColor: statusColor,
+                          attachmentUrl: ticket.attachmentUrl, assignedTo: ticket.assignedTo,
+                        ))),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // Header
+                            Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                  decoration: BoxDecoration(color: statusBg, borderRadius: BorderRadius.circular(8)),
+                                  child: Text(displayStatus, style: TextStyle(fontSize: 9, fontWeight: FontWeight.w800, color: statusColor, letterSpacing: 0.5)),
+                                ),
+                                const Spacer(),
+                                Text(shortId, style: TextStyle(fontSize: 12, color: AppTheme.textSecondary, fontWeight: FontWeight.w600)),
+                              ],
+                            ),
+                            const SizedBox(height: 14),
+                            // Title
+                            Text(ticket.title, style: GoogleFonts.plusJakartaSans(fontSize: 16, fontWeight: FontWeight.w800, color: AppTheme.textPrimary, height: 1.3), maxLines: 2, overflow: TextOverflow.ellipsis),
+                            const SizedBox(height: 16),
+                            // Footer (Category & Date)
+                            Row(
+                              children: [
+                                Icon(Icons.category_rounded, size: 14, color: AppTheme.textSecondary),
+                                const SizedBox(width: 6),
+                                Text(ticket.category, style: TextStyle(fontSize: 12, color: AppTheme.textSecondary, fontWeight: FontWeight.w600)),
+                                const SizedBox(width: 16),
+                                Icon(Icons.calendar_today_rounded, size: 14, color: AppTheme.textSecondary),
+                                const SizedBox(width: 6),
+                                Text(_formatDate(ticket.createdAt), style: TextStyle(fontSize: 12, color: AppTheme.textSecondary, fontWeight: FontWeight.w600)),
+                              ],
+                            ),
+                          ],
+                        ),
                       ),
                     ),
-                    title: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Expanded(
-                          child: Text(
-                            'Tiket #${ticket.id.substring(0, 4)}',
-                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.grey),
+                    if (isActive)
+                      Positioned(
+                        left: 0, top: 24, bottom: 24,
+                        child: Container(
+                          width: 4,
+                          decoration: BoxDecoration(
+                            color: AppTheme.primary,
+                            borderRadius: const BorderRadius.horizontal(right: Radius.circular(4)),
                           ),
                         ),
-                        _StatusBadge(label: ticket.status, color: statusColor),
-                      ],
-                    ),
-                    subtitle: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const SizedBox(height: 8),
-                        Text(
-                          ticket.title,
-                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.black87),
-                        ),
-                        const SizedBox(height: 12),
-                        Row(children: [
-                          const Icon(Icons.calendar_today, size: 14, color: Colors.grey),
-                          const SizedBox(width: 4),
-                          Text(
-                            DateFormat('dd MMM yyyy').format(ticket.createdAt),
-                            style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
-                          ),
-                          const SizedBox(width: 16),
-                          const Icon(Icons.category_outlined, size: 14, color: Colors.grey),
-                          const SizedBox(width: 4),
-                          Text(
-                            ticket.category,
-                            style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
-                          ),
-                        ]),
-                      ],
-                    ),
-                    trailing: const Icon(Icons.chevron_right_rounded),
-                    onTap: () {
-                      Navigator.push(context, MaterialPageRoute(builder: (context) => TicketDetailPage(
-                        ticketId: ticket.id,
-                        title: ticket.title,
-                        description: ticket.description,
-                        category: ticket.category,
-                        status: ticket.status,
-                        statusColor: statusColor,
-                        attachmentUrl: ticket.attachmentUrl,
-                        assignedTo: ticket.assignedTo,
-                      )));
-                    },
-                  ),
+                      ),
+                  ],
                 );
               },
             ),
@@ -214,26 +263,6 @@ class _TicketListContentState extends State<_TicketListContent> {
         }
         return const SizedBox();
       },
-    );
-  }
-}
-
-class _StatusBadge extends StatelessWidget {
-  final String label;
-  final Color color;
-  const _StatusBadge({required this.label, required this.color});
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(6),
-      ),
-      child: Text(
-        label,
-        style: TextStyle(color: color, fontSize: 11, fontWeight: FontWeight.bold),
-      ),
     );
   }
 }

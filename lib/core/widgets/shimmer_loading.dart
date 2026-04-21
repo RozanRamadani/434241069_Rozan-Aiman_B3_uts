@@ -23,25 +23,28 @@ class ShimmerLoading extends StatelessWidget {
     super.key,
     this.width = double.infinity,
     required this.height,
-    double borderRadius = 12,
+    double borderRadius = 16,
   }) : shapeBorder = RoundedRectangleBorder(
-          borderRadius: BorderRadius.all(Radius.circular(borderRadius)),        
+          borderRadius: BorderRadius.all(Radius.circular(borderRadius)),
         );
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Shimmer.fromColors(
-      baseColor: Colors.grey.shade300,
-      highlightColor: Colors.grey.shade100,
+      baseColor: isDark ? const Color(0xFF1E293B) : Colors.grey.shade200,
+      highlightColor: isDark ? const Color(0xFF334155) : Colors.grey.shade50,
       child: Container(
         width: width,
         height: height,
         decoration: BoxDecoration(
-          color: Colors.grey.shade400,
-          borderRadius: shapeBorder is RoundedRectangleBorder 
-            ? (shapeBorder as RoundedRectangleBorder).borderRadius 
+          color: isDark ? const Color(0xFF1E293B) : Colors.grey.shade300,
+          borderRadius: shapeBorder is RoundedRectangleBorder
+            ? (shapeBorder as RoundedRectangleBorder).borderRadius
             : null,
-          shape: shapeBorder is CircleBorder ? BoxShape.circle : BoxShape.rectangle,        ),
+          shape: shapeBorder is CircleBorder ? BoxShape.circle : BoxShape.rectangle,
+        ),
       ),
     );
   }

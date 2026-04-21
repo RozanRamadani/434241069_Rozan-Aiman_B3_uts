@@ -1,4 +1,6 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:tiketdotcom/core/theme/app_theme.dart';
 
 class TicketTrackingTimeline extends StatelessWidget {
   final String status;
@@ -8,78 +10,94 @@ class TicketTrackingTimeline extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     int currentStep = 0;
-    bool isCancelled = status == 'Dibatalkan';
+    bool isCancelled = status.toLowerCase() == 'dibatalkan';
 
-    if (status == 'Menunggu Antrean') {
+    final normalizedStatus = status.toLowerCase();
+    if (normalizedStatus == 'menunggu antrean' || normalizedStatus == 'dalam antrean') {
       currentStep = 0;
-    } else if (status == 'Diproses') {
+    } else if (normalizedStatus == 'diproses' || normalizedStatus == 'dianalisis') {
       currentStep = 1;
-    } else if (status == 'Selesai') {
+    } else if (normalizedStatus == 'perbaikan') {
       currentStep = 2;
+    } else if (normalizedStatus == 'selesai') {
+      currentStep = 3;
     }
 
-    final steps = ['Menunggu', 'Diproses', isCancelled ? 'Dibatalkan' : 'Selesai'];
+    final steps = ['Diterima', 'Dianalisis', 'Perbaikan', isCancelled ? 'Batal' : 'Selesai'];
+    final stepIcons = [
+      Icons.check_rounded,
+      Icons.format_quote_rounded,
+      Icons.build_rounded,
+      isCancelled ? Icons.close_rounded : Icons.check_circle_outline_rounded,
+    ];
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 20.0),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: List.generate(steps.length, (index) {
-          bool isPassed = index <= currentStep || (isCancelled && index == 2);
-          bool isCurrent = index == currentStep || (isCancelled && index == 2);
-          bool isLast = index == steps.length - 1;
-          
-          Color stepColor = isPassed 
-              ? (isCancelled && index == 2 ? Colors.red : Colors.blue.shade600) 
-              : Colors.grey.shade300;
+    return Container(
+      margin: const EdgeInsets.only(bottom: 20),
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: AppTheme.cardShadow,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('PROGRESS PENANGANAN', style: GoogleFonts.plusJakartaSans(fontSize: 10, fontWeight: FontWeight.w800, color: AppTheme.textSecondary, letterSpacing: 1.5)),
+          const SizedBox(height: 16),
+          Row(
+            children: List.generate(steps.length, (index) {
+              bool isPassed = index <= currentStep || (isCancelled && index == 3);
+              bool isLast = index == steps.length - 1;
 
-          return Expanded(
-            flex: isLast ? 1 : 2,
-            child: Row(
-              children: [
-                Expanded(
-                  flex: 1,
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      CircleAvatar(
-                        radius: 12,
-                        backgroundColor: stepColor,
-                        child: Icon(
-                          isPassed 
-                              ? (isCancelled && index == 2 ? Icons.close : Icons.check) 
-                              : Icons.circle,
-                          size: 14, 
-                          color: Colors.white
+              Color stepColor = isPassed
+                  ? (isCancelled && index == 3 ? AppTheme.statusCancelled : AppTheme.primaryDark)
+                  : Colors.white;
+              Color iconColor = isPassed ? Colors.white : AppTheme.border;
+              Color borderColor = isPassed ? Colors.transparent : AppTheme.border;
+
+              return Expanded(
+                child: Row(
+                  children: [
+                    Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(
+                          width: 36, height: 36,
+                          decoration: BoxDecoration(
+                            color: stepColor,
+                            shape: BoxShape.circle,
+                            border: Border.all(color: borderColor, width: 2),
+                          ),
+                          child: Icon(stepIcons[index], size: 18, color: iconColor),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          steps[index],
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 10,
+                            color: isPassed ? AppTheme.primaryDark : AppTheme.textMuted,
+                            fontWeight: isPassed ? FontWeight.w800 : FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                    if (!isLast)
+                      Expanded(
+                        child: Container(
+                          height: 3,
+                          margin: const EdgeInsets.only(bottom: 24),
+                          decoration: BoxDecoration(
+                            color: isPassed && index < currentStep ? AppTheme.primaryDark : AppTheme.border,
+                            borderRadius: BorderRadius.circular(2),
+                          ),
                         ),
                       ),
-                      const SizedBox(height: 6),
-                      Text(
-                        steps[index], 
-                        style: TextStyle(
-                          fontSize: 10, 
-                          color: isCurrent ? Colors.black87 : Colors.grey, 
-                          fontWeight: isCurrent ? FontWeight.bold : FontWeight.normal
-                        )
-                      ),
-                    ],
-                  ),
+                  ],
                 ),
-                if (!isLast)
-                  Expanded(
-                    flex: 2,
-                    child: Container(
-                      height: 3,
-                      color: isPassed && index < currentStep 
-                          ? Colors.blue.shade600 
-                          : Colors.grey.shade300,
-                      margin: const EdgeInsets.only(bottom: 20), // Align with circle center
-                    ),
-                  ),
-              ],
-            ),
-          );
-        }),
+              );
+            }),
+          ),
+        ],
       ),
     );
   }
