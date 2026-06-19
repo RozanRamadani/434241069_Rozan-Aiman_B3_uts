@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:tiketdotcom/core/theme/app_theme.dart';
 import '../../domain/repositories/ticket_repository.dart';
 import '../bloc/ticket_bloc.dart';
@@ -21,6 +22,28 @@ class TicketListPage extends StatefulWidget {
 class _TicketListPageState extends State<TicketListPage> {
   String _searchQuery = '';
   final _searchController = TextEditingController();
+  String? _selectedHelpdesk;
+  List<Map<String, dynamic>> _helpdesks = [];
+  bool _isAdmin = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkRoleAndFetchHelpdesks();
+  }
+
+  Future<void> _checkRoleAndFetchHelpdesks() async {
+    final user = Supabase.instance.client.auth.currentUser;
+    if (user?.userMetadata?['role'] == 'admin') {
+      setState(() => _isAdmin = true);
+      final repo = context.read<TicketRepository>();
+      final result = await repo.getHelpdesks();
+      result.fold(
+        (l) => null,
+        (r) => setState(() => _helpdesks = r),
+      );
+    }
+  }
 
   @override
   void dispose() {
@@ -90,6 +113,35 @@ class _TicketListPageState extends State<TicketListPage> {
                       ],
                     ),
                   ),
+                  if (_isAdmin && _helpdesks.isNotEmpty) ...[
+                    const SizedBox(height: 12),
+                    Container(
+                      height: 48,
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(AppTheme.radiusPill)),
+                      child: DropdownButtonHideUnderline(
+                        child: DropdownButton<String?>(
+                          isExpanded: true,
+                          value: _selectedHelpdesk,
+                          hint: Text('Semua Helpdesk', style: TextStyle(color: AppTheme.textMuted, fontSize: 13)),
+                          icon: Icon(Icons.arrow_drop_down_rounded, color: AppTheme.textMuted),
+                          items: [
+                            DropdownMenuItem<String?>(
+                              value: null,
+                              child: Text('Semua Helpdesk', style: GoogleFonts.plusJakartaSans(fontSize: 13, fontWeight: FontWeight.w600)),
+                            ),
+                            ..._helpdesks.map((h) => DropdownMenuItem<String?>(
+                              value: h['id'],
+                              child: Text(h['full_name'] ?? 'Unknown', style: GoogleFonts.plusJakartaSans(fontSize: 13, fontWeight: FontWeight.w600)),
+                            )),
+                          ],
+                          onChanged: (val) {
+                            setState(() => _selectedHelpdesk = val);
+                          },
+                        ),
+                      ),
+                    ),
+                  ],
                   const SizedBox(height: 20),
                   // Tabs
                   Container(
@@ -113,9 +165,9 @@ class _TicketListPageState extends State<TicketListPage> {
             Expanded(
               child: TabBarView(
                 children: [
-                  BlocProvider(create: (c) => TicketBloc(ticketRepository: c.read<TicketRepository>()), child: _TicketTab(statusFilter: 'Aktif', searchQuery: _searchQuery)),
-                  BlocProvider(create: (c) => TicketBloc(ticketRepository: c.read<TicketRepository>()), child: _TicketTab(statusFilter: 'Selesai', searchQuery: _searchQuery)),
-                  BlocProvider(create: (c) => TicketBloc(ticketRepository: c.read<TicketRepository>()), child: _TicketTab(statusFilter: 'Dibatalkan', searchQuery: _searchQuery)),
+                  BlocProvider(create: (c) => TicketBloc(ticketRepository: c.read<TicketRepository>()), child: _TicketTab(statusFilter: 'Aktif', searchQuery: _searchQuery, helpdeskFilter: _selectedHelpdesk)),
+                  BlocProvider(create: (c) => TicketBloc(ticketRepository: c.read<TicketRepository>()), child: _TicketTab(statusFilter: 'Selesai', searchQuery: _searchQuery, helpdeskFilter: _selectedHelpdesk)),
+                  BlocProvider(create: (c) => TicketBloc(ticketRepository: c.read<TicketRepository>()), child: _TicketTab(statusFilter: 'Dibatalkan', searchQuery: _searchQuery, helpdeskFilter: _selectedHelpdesk)),
                 ],
               ),
             ),
@@ -129,7 +181,8 @@ class _TicketListPageState extends State<TicketListPage> {
 class _TicketTab extends StatefulWidget {
   final String statusFilter;
   final String searchQuery;
-  const _TicketTab({required this.statusFilter, required this.searchQuery});
+  final String? helpdeskFilter;
+  const _TicketTab({required this.statusFilter, required this.searchQuery, this.helpdeskFilter});
 
   @override
   State<_TicketTab> createState() => _TicketTabState();
@@ -139,7 +192,15 @@ class _TicketTabState extends State<_TicketTab> {
   @override
   void initState() {
     super.initState();
-    context.read<TicketBloc>().add(FetchTickets(statusFilter: widget.statusFilter));
+    context.read<TicketBloc>().add(FetchTickets(statusFilter: widget.statusFilter, helpdeskFilter: widget.helpdeskFilter));
+  }
+
+  @override
+  void didUpdateWidget(covariant _TicketTab oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.helpdeskFilter != widget.helpdeskFilter) {
+      context.read<TicketBloc>().add(FetchTickets(statusFilter: widget.statusFilter, helpdeskFilter: widget.helpdeskFilter));
+    }
   }
 
   String _formatDate(DateTime time) {
@@ -176,7 +237,7 @@ class _TicketTabState extends State<_TicketTab> {
           }
 
           return RefreshIndicator(
-            onRefresh: () async => context.read<TicketBloc>().add(FetchTickets(statusFilter: widget.statusFilter)),
+            onRefresh: () async => context.read<TicketBloc>().add(FetchTickets(statusFilter: widget.statusFilter, helpdeskFilter: widget.helpdeskFilter)),
             child: ListView.separated(
               padding: const EdgeInsets.fromLTRB(20, 16, 20, 100),
               itemCount: filtered.length,
@@ -205,9 +266,7 @@ class _TicketTabState extends State<_TicketTab> {
                       child: InkWell(
                         borderRadius: BorderRadius.circular(24),
                         onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => TicketDetailPage(
-                          ticketId: ticket.id, title: ticket.title, description: ticket.description,
-                          category: ticket.category, status: ticket.status, statusColor: statusColor,
-                          attachmentUrl: ticket.attachmentUrl, assignedTo: ticket.assignedTo,
+                          ticket: ticket,
                         ))),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -258,6 +317,31 @@ class _TicketTabState extends State<_TicketTab> {
                   ],
                 );
               },
+            ),
+          );
+        }
+        if (state is TicketError) {
+          return Center(
+            child: Padding(
+              padding: const EdgeInsets.all(32),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.error_outline_rounded, size: 56, color: Colors.grey[300]),
+                  const SizedBox(height: 12),
+                  Text(
+                    state.message,
+                    style: TextStyle(color: AppTheme.textMuted, fontSize: 13),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 16),
+                  ElevatedButton.icon(
+                    onPressed: () => context.read<TicketBloc>().add(FetchTickets(statusFilter: widget.statusFilter, helpdeskFilter: widget.helpdeskFilter)),
+                    icon: const Icon(Icons.refresh_rounded, size: 18),
+                    label: const Text('Coba Lagi'),
+                  ),
+                ],
+              ),
             ),
           );
         }

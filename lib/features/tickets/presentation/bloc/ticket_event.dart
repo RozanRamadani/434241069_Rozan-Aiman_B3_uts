@@ -1,4 +1,4 @@
-﻿import 'dart:io';
+import 'dart:io';
 import 'package:equatable/equatable.dart';
 import '../../domain/entities/ticket.dart';
 
@@ -11,10 +11,11 @@ abstract class TicketEvent extends Equatable {
 
 class FetchTickets extends TicketEvent {
   final String? statusFilter;
-  const FetchTickets({this.statusFilter});
+  final String? helpdeskFilter;
+  const FetchTickets({this.statusFilter, this.helpdeskFilter});
 
   @override
-  List<Object?> get props => [statusFilter];
+  List<Object?> get props => [statusFilter, helpdeskFilter];
 }
 
 class CreateTicketEvent extends TicketEvent {
@@ -40,11 +41,48 @@ class UpdateStatusEvent extends TicketEvent {
 class AssignTicketEvent extends TicketEvent {
   final String ticketId;
   final String helpdeskId;
+  final String helpdeskName;
 
-  const AssignTicketEvent({required this.ticketId, required this.helpdeskId});
+  const AssignTicketEvent({
+    required this.ticketId, 
+    required this.helpdeskId, 
+    required this.helpdeskName,
+  });
 
   @override
-  List<Object?> get props => [ticketId, helpdeskId];
+  List<Object?> get props => [ticketId, helpdeskId, helpdeskName];
+}
+
+class AcceptTicketEvent extends TicketEvent {
+  final String ticketId;
+  const AcceptTicketEvent(this.ticketId);
+
+  @override
+  List<Object?> get props => [ticketId];
+}
+
+class ResolveTicketEvent extends TicketEvent {
+  final String ticketId;
+  const ResolveTicketEvent(this.ticketId);
+
+  @override
+  List<Object?> get props => [ticketId];
+}
+
+class CancelTicketEvent extends TicketEvent {
+  final String ticketId;
+  const CancelTicketEvent(this.ticketId);
+
+  @override
+  List<Object?> get props => [ticketId];
+}
+
+class DeleteTicketEvent extends TicketEvent {
+  final String ticketId;
+  const DeleteTicketEvent(this.ticketId);
+
+  @override
+  List<Object?> get props => [ticketId];
 }
 
 class FetchHelpdesksEvent extends TicketEvent {}

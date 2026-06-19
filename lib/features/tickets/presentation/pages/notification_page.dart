@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:intl/intl.dart';
 import 'package:tiketdotcom/core/theme/app_theme.dart';
+import '../../data/models/ticket_model.dart';
 import 'ticket_detail_page.dart';
 
 class NotificationPage extends StatefulWidget {
@@ -29,10 +30,9 @@ class _NotificationPageState extends State<NotificationPage> {
 
     try {
       final data = await supabase
-          .from('ticket_comments')
-          .select('*, tickets!inner(user_id, title, description, category, status, attachment_url)')
-          .eq('tickets.user_id', userId)
-          .neq('user_id', userId)
+          .from('notifications')
+          .select('*, tickets(title, description, category, status, attachment_url, assigned_to)')
+          .eq('user_id', userId)
           .order('created_at', ascending: false)
           .limit(20);
 
@@ -78,6 +78,8 @@ class _NotificationPageState extends State<NotificationPage> {
                       final item = _notifications[index];
                       final time = DateTime.parse(item['created_at']);
                       final ticketTitle = item['tickets']?['title'] ?? 'Tiket';
+                      final title = item['title'] ?? 'Notifikasi Baru';
+                      final message = item['message'] ?? '';
 
                       return Container(
                         decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(AppTheme.radiusLg), boxShadow: AppTheme.softShadow),
@@ -85,20 +87,28 @@ class _NotificationPageState extends State<NotificationPage> {
                           color: Colors.transparent,
                           child: InkWell(
                             borderRadius: BorderRadius.circular(AppTheme.radiusLg),
-                            onTap: () => _navigateToTicket(item),
+                            onTap: () async {
+                              // mark as read
+                              if (item['is_read'] != true) {
+                                await supabase.from('notifications').update({'is_read': true}).eq('id', item['id']);
+                              }
+                              _navigateToTicket(item);
+                            },
                             child: Padding(
                               padding: const EdgeInsets.all(16),
                               child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
                                 CircleAvatar(radius: 20, backgroundColor: AppTheme.primary.withValues(alpha: 0.1),
-                                  child: Icon(Icons.message_rounded, color: AppTheme.primary, size: 18)),
+                                  child: Icon(Icons.notifications_active_rounded, color: AppTheme.primary, size: 18)),
                                 const SizedBox(width: 14),
                                 Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                                   Row(children: [
-                                    Expanded(child: Text(ticketTitle, style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w700, fontSize: 14), maxLines: 1, overflow: TextOverflow.ellipsis)),
+                                    Expanded(child: Text(title, style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w700, fontSize: 14, color: item['is_read'] == true ? AppTheme.textSecondary : AppTheme.textPrimary), maxLines: 1, overflow: TextOverflow.ellipsis)),
                                     Text(_timeAgo(time), style: TextStyle(fontSize: 11, color: AppTheme.primaryDark, fontWeight: FontWeight.w600)),
                                   ]),
                                   const SizedBox(height: 4),
-                                  Text(item['message'] ?? 'Ada balasan baru.', style: TextStyle(fontSize: 13, color: AppTheme.textSecondary), maxLines: 2, overflow: TextOverflow.ellipsis),
+                                  Text(message, style: TextStyle(fontSize: 13, color: AppTheme.textSecondary), maxLines: 2, overflow: TextOverflow.ellipsis),
+                                  const SizedBox(height: 4),
+                                  Text('Tiket: $ticketTitle', style: TextStyle(fontSize: 11, color: AppTheme.primaryDark, fontWeight: FontWeight.w600), maxLines: 1, overflow: TextOverflow.ellipsis),
                                 ])),
                               ]),
                             ),
@@ -116,14 +126,10 @@ class _NotificationPageState extends State<NotificationPage> {
     if (ticketData == null) return;
     showDialog(context: context, barrierDismissible: false, builder: (_) => const Center(child: CircularProgressIndicator()));
     try {
-      final ticketId = item['ticket_id'];
-      final status = ticketData['status'] ?? 'Aktif';
       if (mounted) {
         Navigator.pop(context);
         Navigator.push(context, MaterialPageRoute(builder: (_) => TicketDetailPage(
-          ticketId: ticketId, title: ticketData['title'] ?? '-', description: ticketData['description'] ?? '-',
-          category: ticketData['category'] ?? '-', status: status, statusColor: AppTheme.statusColor(status),
-          attachmentUrl: ticketData['attachment_url'], assignedTo: ticketData['assigned_to'],
+          ticket: TicketModel.fromJson(ticketData),
         )));
       }
     } catch (e) { if (mounted) Navigator.pop(context); }

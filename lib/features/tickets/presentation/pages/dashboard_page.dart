@@ -5,6 +5,8 @@ import 'package:tiketdotcom/core/theme/app_theme.dart';
 import 'package:tiketdotcom/features/tickets/presentation/pages/notification_page.dart';
 import 'package:tiketdotcom/features/tickets/presentation/pages/ticket_detail_page.dart';
 import 'package:tiketdotcom/features/tickets/presentation/pages/main_nav_page.dart';
+import '../../data/models/ticket_model.dart';
+import '../../../../core/widgets/shimmer_loading.dart';
 
 class DashboardPage extends StatefulWidget {
   const DashboardPage({super.key});
@@ -15,37 +17,87 @@ class DashboardPage extends StatefulWidget {
 
 class _DashboardPageState extends State<DashboardPage> {
   final supabase = Supabase.instance.client;
+  late Stream<List<Map<String, dynamic>>> _ticketsStream;
+  String? _userRole;
+  String? _userId;
 
   @override
-  Widget build(BuildContext context) {
+  void initState() {
+    super.initState();
     final user = supabase.auth.currentUser;
-    final role = user?.userMetadata?['role'] ?? 'user';
-
-    return Scaffold(
-      backgroundColor: AppTheme.background,
-      body: StreamBuilder<List<Map<String, dynamic>>>(
-        stream: _getTicketsStream(user?.id, role),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          if (snapshot.hasError) {
-            return _buildErrorState(snapshot.error.toString());
-          }
-          final tickets = snapshot.data ?? [];
-          return _buildBody(context, tickets, role);
-        },
-      ),
-    );
+    _userId = user?.id;
+    _userRole = user?.userMetadata?['role'] ?? 'user';
+    _ticketsStream = _getTicketsStream(_userId, _userRole!);
   }
 
   Stream<List<Map<String, dynamic>>> _getTicketsStream(String? userId, String role) {
     if (userId == null) return const Stream.empty();
     if (role == 'user') {
       return supabase.from('tickets').stream(primaryKey: ['id']).eq('user_id', userId).order('created_at', ascending: false);
+    } else if (role == 'helpdesk') {
+      return supabase.from('tickets').stream(primaryKey: ['id']).eq('assigned_to', userId).order('created_at', ascending: false);
     } else {
       return supabase.from('tickets').stream(primaryKey: ['id']).order('created_at', ascending: false);
     }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: AppTheme.background,
+      body: StreamBuilder<List<Map<String, dynamic>>>(
+        stream: _ticketsStream,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return _buildLoadingState();
+          }
+          if (snapshot.hasError) {
+            return _buildErrorState(snapshot.error.toString());
+          }
+          final tickets = snapshot.data ?? [];
+          return _buildBody(context, tickets, _userRole!);
+        },
+      ),
+    );
+  }
+
+  Widget _buildLoadingState() {
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          children: [
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                ShimmerLoading.circular(width: 44, height: 44),
+                const SizedBox(width: 12),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    ShimmerLoading.rounded(width: 100, height: 12),
+                    const SizedBox(height: 4),
+                    ShimmerLoading.rounded(width: 150, height: 18),
+                  ],
+                ),
+                const Spacer(),
+                ShimmerLoading.circular(width: 32, height: 32),
+              ],
+            ),
+            const SizedBox(height: 24),
+            ShimmerLoading.rounded(height: 160, width: double.infinity),
+            const SizedBox(height: 24),
+            Row(
+              children: [
+                Expanded(child: ShimmerLoading.rounded(height: 100)),
+                const SizedBox(width: 16),
+                Expanded(child: ShimmerLoading.rounded(height: 100)),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   Widget _buildErrorState(String msg) {
@@ -65,9 +117,14 @@ class _DashboardPageState extends State<DashboardPage> {
 
   Widget _buildBody(BuildContext context, List<Map<String, dynamic>> tickets, String role) {
     int total = tickets.length;
-    int active = tickets.where((t) => t['status'] != 'Selesai' && t['status'] != 'Dibatalkan').length;
+    int openCount = tickets.where((t) => t['status'] == 'Menunggu Antrean').length;
+    int assigned = tickets.where((t) => t['status'] == 'Ditugaskan').length;
+    int inProgress = tickets.where((t) => t['status'] == 'Sedang Diproses').length;
     int resolved = tickets.where((t) => t['status'] == 'Selesai').length;
     int cancelled = tickets.where((t) => t['status'] == 'Dibatalkan').length;
+
+    int totalDitugaskan = tickets.length;
+    int menungguDiterima = assigned;
 
     // Show up to 5 recent tickets on the dashboard
     final recentTickets = tickets.take(5).toList();
@@ -130,21 +187,20 @@ class _DashboardPageState extends State<DashboardPage> {
                       style: TextStyle(color: Colors.white.withValues(alpha: 0.9), fontSize: 14, height: 1.4),
                     ),
                     const SizedBox(height: 24),
-                    if (role == 'user')
-                      ElevatedButton.icon(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.white,
-                          foregroundColor: AppTheme.primaryDark,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppTheme.radiusPill)),
-                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                        ),
-                        onPressed: () {
-                          // Navigate to Lapor tab (index 2)
-                          Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const MainNavPage(initialIndex: 2)));
-                        },
-                        icon: const Icon(Icons.add_circle_outline_rounded, size: 20),
-                        label: const Text('Buat Tiket Baru'),
+                    ElevatedButton.icon(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.white,
+                        foregroundColor: AppTheme.primaryDark,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppTheme.radiusPill)),
+                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                       ),
+                      onPressed: () {
+                        // Navigate to Lapor tab (index 2)
+                        Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const MainNavPage(initialIndex: 2)));
+                      },
+                      icon: const Icon(Icons.add_circle_outline_rounded, size: 20),
+                      label: const Text('Buat Tiket Baru'),
+                    ),
                   ],
                 ),
               ),
@@ -162,11 +218,18 @@ class _DashboardPageState extends State<DashboardPage> {
                 mainAxisSpacing: 16,
                 crossAxisSpacing: 16,
                 childAspectRatio: 1.25,
-                children: [
-                  _StatCard(title: 'TOTAL TIKET', count: total.toString().padLeft(2, '0'), icon: Icons.receipt_long_rounded, iconColor: AppTheme.primary, iconBg: AppTheme.primaryLight),
-                  _StatCard(title: 'AKTIF', count: active.toString().padLeft(2, '0'), icon: Icons.assignment_rounded, iconColor: const Color(0xFFB45309), iconBg: const Color(0xFFFEF3C7)),
+                children: role == 'helpdesk' ? [
+                  _StatCard(title: 'TOTAL DITUGASKAN', count: totalDitugaskan.toString().padLeft(2, '0'), icon: Icons.receipt_long_rounded, iconColor: AppTheme.primary, iconBg: AppTheme.primaryLight),
+                  _StatCard(title: 'MENUNGGU DITERIMA', count: menungguDiterima.toString().padLeft(2, '0'), icon: Icons.assignment_rounded, iconColor: const Color(0xFFB45309), iconBg: const Color(0xFFFEF3C7)),
+                  _StatCard(title: 'SEDANG DIPROSES', count: inProgress.toString().padLeft(2, '0'), icon: Icons.autorenew_rounded, iconColor: const Color(0xFF0284C7), iconBg: const Color(0xFFE0F2FE)),
+                  _StatCard(title: 'SELESAI', count: resolved.toString().padLeft(2, '0'), icon: Icons.check_circle_rounded, iconColor: AppTheme.statusResolved, iconBg: AppTheme.statusResolvedBg),
+                ] : [
+                  _StatCard(title: 'OPEN (MENUNGGU)', count: openCount.toString().padLeft(2, '0'), icon: Icons.inbox_rounded, iconColor: const Color(0xFFB45309), iconBg: const Color(0xFFFEF3C7)),
+                  _StatCard(title: 'DITUGASKAN', count: assigned.toString().padLeft(2, '0'), icon: Icons.person_add_rounded, iconColor: const Color(0xFF4F46E5), iconBg: const Color(0xFFE0E7FF)),
+                  _StatCard(title: 'DIPROSES', count: inProgress.toString().padLeft(2, '0'), icon: Icons.autorenew_rounded, iconColor: const Color(0xFF0284C7), iconBg: const Color(0xFFE0F2FE)),
                   _StatCard(title: 'SELESAI', count: resolved.toString().padLeft(2, '0'), icon: Icons.check_circle_rounded, iconColor: AppTheme.statusResolved, iconBg: AppTheme.statusResolvedBg),
                   _StatCard(title: 'DIBATALKAN', count: cancelled.toString().padLeft(2, '0'), icon: Icons.cancel_rounded, iconColor: AppTheme.statusCancelled, iconBg: AppTheme.statusCancelledBg),
+                  _StatCard(title: 'TOTAL TIKET', count: total.toString().padLeft(2, '0'), icon: Icons.receipt_long_rounded, iconColor: AppTheme.primary, iconBg: AppTheme.primaryLight),
                 ],
               ),
             ),
@@ -315,7 +378,6 @@ class _TicketCard extends StatelessWidget {
     final statusBg = AppTheme.statusBgColor(status);
     final category = ticket['category'] ?? '-';
     final title = ticket['title'] ?? '-';
-    final description = ticket['description'] ?? '';
     final ticketId = ticket['id'] ?? '';
     final shortId = '#TK-${ticketId.length >= 5 ? ticketId.substring(ticketId.length - 5) : ticketId}';
     final timeAgo = _timeAgo(ticket['created_at']);
@@ -336,14 +398,7 @@ class _TicketCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(24),
         onTap: () {
           Navigator.push(context, MaterialPageRoute(builder: (_) => TicketDetailPage(
-            ticketId: ticketId,
-            title: title,
-            description: description,
-            category: category,
-            status: status,
-            statusColor: statusColor,
-            attachmentUrl: ticket['attachment_url'],
-            assignedTo: ticket['assigned_to'],
+            ticket: TicketModel.fromJson(ticket),
           )));
         },
         child: Row(

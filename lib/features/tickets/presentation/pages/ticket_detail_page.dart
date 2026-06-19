@@ -10,23 +10,16 @@ import '../../data/models/comment_model.dart';
 import '../bloc/ticket_bloc.dart';
 import '../bloc/ticket_event.dart';
 import '../bloc/ticket_state.dart';
+import '../../domain/entities/ticket.dart';
 import '../../domain/repositories/ticket_repository.dart';
 import '../widgets/ticket_tracking_timeline.dart';
 
 class TicketDetailPage extends StatefulWidget {
-  final String ticketId;
-  final String title;
-  final String description;
-  final String category;
-  final String status;
-  final Color statusColor;
-  final String? attachmentUrl;
-  final String? assignedTo;
+  final Ticket ticket;
 
   const TicketDetailPage({
-    super.key, required this.ticketId, required this.title, required this.description,
-    required this.category, required this.status, required this.statusColor,
-    this.attachmentUrl, this.assignedTo,
+    super.key,
+    required this.ticket,
   });
 
   @override
@@ -39,10 +32,12 @@ class _TicketDetailPageState extends State<TicketDetailPage> {
   final supabase = Supabase.instance.client;
   List<Comment> _comments = [];
   bool _isLoading = true;
+  late Ticket _ticket;
 
   @override
   void initState() {
     super.initState();
+    _ticket = widget.ticket;
     Future.microtask(() => _fetchData());
   }
 
@@ -63,12 +58,17 @@ class _TicketDetailPageState extends State<TicketDetailPage> {
     if (!mounted) return;
     setState(() => _isLoading = true);
     final repo = RepositoryProvider.of<TicketRepository>(context);
-    final results = await Future.wait([repo.getComments(widget.ticketId)]);
+    final results = await Future.wait([
+      repo.getComments(widget.ticket.id),
+      repo.getTicketById(widget.ticket.id),
+    ]);
     if (mounted) {
       setState(() {
         _isLoading = false;
         final commentResult = results[0] as dartz.Either<dynamic, List<Comment>>;
         commentResult.fold((l) {}, (r) => _comments = r);
+        final ticketResult = results[1] as dartz.Either<dynamic, Ticket>;
+        ticketResult.fold((l) {}, (freshTicket) => _ticket = freshTicket);
       });
       WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToBottom());
     }
@@ -79,7 +79,7 @@ class _TicketDetailPageState extends State<TicketDetailPage> {
     final message = _commentController.text.trim();
     _commentController.clear();
     final repo = RepositoryProvider.of<TicketRepository>(context);
-    final result = await repo.sendComment(widget.ticketId, message);
+    final result = await repo.sendComment(widget.ticket.id, message);
     if (mounted) {
       result.fold(
         (l) => ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l.message))),
@@ -98,8 +98,49 @@ class _TicketDetailPageState extends State<TicketDetailPage> {
           TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Kembali')),
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: AppTheme.statusCancelled),
-            onPressed: () { Navigator.pop(dialogContext); context.read<TicketBloc>().add(UpdateStatusEvent(ticketId: widget.ticketId, status: 'Dibatalkan')); },
+            onPressed: () { Navigator.pop(dialogContext); context.read<TicketBloc>().add(CancelTicketEvent(widget.ticket.id)); },
             child: const Text('Ya, Batalkan'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showDeleteDialog() {
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text('Hapus Tiket', style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w700)),
+        content: const Text('Apakah Anda yakin ingin menghapus tiket ini secara permanen?'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Batal')),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: AppTheme.statusCancelled),
+            onPressed: () { 
+              Navigator.pop(dialogContext); 
+              context.read<TicketBloc>().add(DeleteTicketEvent(widget.ticket.id)); 
+            },
+            child: const Text('Ya, Hapus'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showConfirmAssignDialog(String helpdeskId, String helpdeskName) {
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text('Konfirmasi Penugasan', style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w700)),
+        content: Text('Tugaskan tiket ini ke $helpdeskName?'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Batal')),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(dialogContext);
+              context.read<TicketBloc>().add(AssignTicketEvent(ticketId: widget.ticket.id, helpdeskId: helpdeskId, helpdeskName: helpdeskName));
+            },
+            child: const Text('Ya, Tugaskan'),
           ),
         ],
       ),
@@ -129,10 +170,17 @@ class _TicketDetailPageState extends State<TicketDetailPage> {
                       itemCount: helpdesks.length,
                       itemBuilder: (context, index) {
                         final hd = helpdesks[index];
+                        final activeTickets = hd['active_tickets'] ?? 0;
+                        final name = hd['full_name'] ?? 'Unknown';
+
                         return ListTile(
                           leading: CircleAvatar(backgroundColor: AppTheme.primary.withValues(alpha: 0.1), child: const Icon(Icons.person_rounded, color: AppTheme.primary)),
-                          title: Text(hd['full_name'] ?? 'Unknown', style: const TextStyle(fontWeight: FontWeight.w600)),
-                          onTap: () { Navigator.pop(bottomSheetContext); context.read<TicketBloc>().add(AssignTicketEvent(ticketId: widget.ticketId, helpdeskId: hd['id'])); },
+                          title: Text(name, style: const TextStyle(fontWeight: FontWeight.w600)),
+                          subtitle: Text('Sedang Menangani $activeTickets tiket', style: TextStyle(color: AppTheme.textMuted, fontSize: 12)),
+                          onTap: () { 
+                            Navigator.pop(bottomSheetContext); 
+                            _showConfirmAssignDialog(hd['id'], name);
+                          },
                         );
                       },
                     ),
@@ -153,21 +201,33 @@ class _TicketDetailPageState extends State<TicketDetailPage> {
     final currentUser = supabase.auth.currentUser;
     final role = currentUser?.userMetadata?['role'] ?? 'user';
     final avatarUrl = currentUser?.userMetadata?['avatar_url'];
-    final statusColor = AppTheme.statusColor(widget.status);
-    final statusBg = AppTheme.statusBgColor(widget.status);
-    final shortId = '#TK-${widget.ticketId.length >= 6 ? widget.ticketId.substring(widget.ticketId.length - 6) : widget.ticketId}';
+    final statusColor = AppTheme.statusColor(_ticket.status);
+    final statusBg = AppTheme.statusBgColor(_ticket.status);
+    final shortId = '#TK-${_ticket.id.length >= 6 ? _ticket.id.substring(_ticket.id.length - 6) : _ticket.id}';
     
-    String displayStatus = widget.status.toUpperCase();
-    if (widget.status == 'Menunggu Antrean') displayStatus = 'DALAM ANTREAN';
+    String displayStatus = _ticket.status.toUpperCase();
+    if (_ticket.status == 'Menunggu Antrean') displayStatus = 'DALAM ANTREAN';
 
     return BlocListener<TicketBloc, TicketState>(
       listener: (context, state) {
         if (state is StatusUpdated) {
           ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Status berhasil diubah!'), backgroundColor: AppTheme.statusResolved));
-          Navigator.pop(context);
+          Navigator.pop(context, true);
         } else if (state is TicketAssigned) {
           ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Tiket berhasil ditugaskan!'), backgroundColor: AppTheme.statusResolved));
-          Navigator.pop(context);
+          Navigator.pop(context, true);
+        } else if (state is TicketAccepted) {
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Tiket mulai diproses!'), backgroundColor: AppTheme.statusResolved));
+          Navigator.pop(context, true);
+        } else if (state is TicketResolved) {
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Tiket telah selesai!'), backgroundColor: AppTheme.statusResolved));
+          Navigator.pop(context, true);
+        } else if (state is TicketCancelled) {
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Tiket dibatalkan!'), backgroundColor: AppTheme.statusResolved));
+          Navigator.pop(context, true);
+        } else if (state is TicketDeleted) {
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Tiket berhasil dihapus secara permanen!'), backgroundColor: AppTheme.statusResolved));
+          Navigator.pop(context, true);
         } else if (state is TicketError) {
           ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(state.message), backgroundColor: AppTheme.statusCancelled));
         }
@@ -177,6 +237,8 @@ class _TicketDetailPageState extends State<TicketDetailPage> {
           title: Text('Helpdesk UNAIR', style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w800, color: AppTheme.primaryDark)),
           centerTitle: true,
           actions: [
+            if (role == 'admin')
+              IconButton(icon: const Icon(Icons.delete_rounded, color: AppTheme.statusCancelled), onPressed: _showDeleteDialog),
             IconButton(icon: const Icon(Icons.notifications_rounded, color: AppTheme.primary), onPressed: () {}),
             Padding(
               padding: const EdgeInsets.only(right: 16),
@@ -209,12 +271,12 @@ class _TicketDetailPageState extends State<TicketDetailPage> {
                     ],
                   ),
                   const SizedBox(height: 12),
-                  Text(widget.title, style: GoogleFonts.plusJakartaSans(fontSize: 22, fontWeight: FontWeight.w800, color: AppTheme.textPrimary, height: 1.2)),
+                  Text(_ticket.title, style: GoogleFonts.plusJakartaSans(fontSize: 22, fontWeight: FontWeight.w800, color: AppTheme.textPrimary, height: 1.2)),
                   const SizedBox(height: 8),
-                  Text('Dilaporkan pada ${DateFormat('dd MMM yyyy • HH:mm').format(DateTime.now())} WIB', style: TextStyle(color: AppTheme.textMuted, fontSize: 13)),
+                  Text('Dilaporkan pada ${DateFormat('dd MMM yyyy • HH:mm').format(_ticket.createdAt.toLocal())} WIB', style: TextStyle(color: AppTheme.textMuted, fontSize: 13)),
                   const SizedBox(height: 16),
                   
-                  if (widget.status == 'Menunggu Antrean' && role == 'user')
+                  if (_ticket.status == 'Menunggu Antrean' && role == 'user')
                     Align(
                       alignment: Alignment.centerLeft,
                       child: ActionChip(
@@ -228,7 +290,7 @@ class _TicketDetailPageState extends State<TicketDetailPage> {
                   const SizedBox(height: 24),
 
                   // Timeline
-                  TicketTrackingTimeline(status: widget.status),
+                  TicketTrackingTimeline(ticket: _ticket),
 
                   // Petugas IT
                   Container(
@@ -241,21 +303,45 @@ class _TicketDetailPageState extends State<TicketDetailPage> {
                         const SizedBox(height: 16),
                         CircleAvatar(radius: 28, backgroundColor: AppTheme.primaryLight, child: const Icon(Icons.support_agent_rounded, size: 32, color: AppTheme.primary)),
                         const SizedBox(height: 12),
-                        Text(widget.assignedTo ?? 'Belum Ditugaskan', style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w800, fontSize: 15, color: AppTheme.textPrimary)),
+                        Text(_ticket.assignedToName ?? 'Belum Ditugaskan', style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w800, fontSize: 15, color: AppTheme.textPrimary)),
                         const SizedBox(height: 4),
                         Text('Infrastruktur Jaringan', style: TextStyle(fontSize: 12, color: AppTheme.textMuted)),
                         
-                        if (widget.status != 'Selesai' && widget.status != 'Dibatalkan' && (role == 'admin' || role == 'helpdesk')) ...[
+                        if (_ticket.status != 'Selesai' && _ticket.status != 'Dibatalkan') ...[
                           const SizedBox(height: 16),
                           Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              OutlinedButton(onPressed: _showAssignBottomSheet, child: const Text('Ubah')),
-                              const SizedBox(width: 8),
-                              ElevatedButton(
-                                onPressed: () => context.read<TicketBloc>().add(UpdateStatusEvent(ticketId: widget.ticketId, status: widget.status == 'Menunggu Antrean' ? 'Diproses' : 'Selesai')),
-                                child: Text(widget.status == 'Menunggu Antrean' ? 'Proses' : 'Selesai'),
-                              )
+                              // Admin Logic
+                              if (role == 'admin') 
+                                if (_ticket.status == 'Menunggu Antrean' || _ticket.status == 'Dalam Antrean')
+                                  ElevatedButton(onPressed: _showAssignBottomSheet, child: const Text('Tugaskan Helpdesk'))
+                                else if (_ticket.status == 'Ditugaskan')
+                                  OutlinedButton(onPressed: _showAssignBottomSheet, child: const Text('Ganti Helpdesk')),
+                              
+                              // Helpdesk Logic
+                              if (role == 'helpdesk' && _ticket.assignedTo == currentUser?.id) ...[
+                                if (_ticket.status == 'Ditugaskan')
+                                  ElevatedButton(
+                                    style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
+                                    onPressed: () => context.read<TicketBloc>().add(AcceptTicketEvent(_ticket.id)),
+                                    child: const Text('Terima Tiket'),
+                                  )
+                                else if (_ticket.status == 'Sedang Diproses')
+                                  ElevatedButton(
+                                    style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
+                                    onPressed: () => context.read<TicketBloc>().add(ResolveTicketEvent(_ticket.id)),
+                                    child: const Text('Selesai'),
+                                  ),
+                              ],
+
+                              // User Info
+                              if (role == 'user') ...[
+                                if (_ticket.status == 'Ditugaskan')
+                                  Text('Menunggu helpdesk menerima tiket', style: TextStyle(color: AppTheme.textMuted, fontStyle: FontStyle.italic)),
+                                if (_ticket.status == 'Sedang Diproses')
+                                  Text('Tiket sedang ditangani', style: TextStyle(color: AppTheme.textMuted, fontStyle: FontStyle.italic)),
+                              ],
                             ],
                           )
                         ]
@@ -274,9 +360,9 @@ class _TicketDetailPageState extends State<TicketDetailPage> {
                   const SizedBox(height: 16),
                   
                   // Description as the first message
-                  _buildChatBubble(user: 'Anda', message: widget.description, isMe: true, time: DateFormat('HH:mm').format(DateTime.now())),
+                  _buildChatBubble(user: 'Anda', message: _ticket.description, isMe: true, time: DateFormat('HH:mm').format(_ticket.createdAt.toLocal())),
                   
-                  if (widget.attachmentUrl != null && widget.attachmentUrl!.isNotEmpty)
+                  if (_ticket.attachmentUrl != null && _ticket.attachmentUrl!.isNotEmpty)
                     _buildAttachmentBubble(isMe: true),
 
                   if (_isLoading)

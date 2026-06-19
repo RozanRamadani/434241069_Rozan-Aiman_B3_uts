@@ -30,6 +30,8 @@ dependencies:
   image_picker: ^1.1.2
   cached_network_image: ^3.4.1
   shimmer: ^3.0.0
+  flutter_dotenv: ^6.0.1
+  flutter_local_notifications: ^22.0.1
 
 dev_dependencies:
   flutter_test:
@@ -38,3 +40,5 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+  assets:
+    - .env

@@ -2,8 +2,11 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'core/theme/app_theme.dart';
+import 'core/services/notification_service.dart';
 import 'features/auth/data/repositories/auth_repository_impl.dart';
 import 'features/auth/domain/repositories/auth_repository.dart';
 import 'features/auth/presentation/bloc/auth_bloc.dart';
@@ -15,9 +18,19 @@ import 'features/tickets/presentation/bloc/ticket_bloc.dart';
 import 'features/tickets/presentation/pages/main_nav_page.dart';
 
 late Future<void> supabaseInitializer;
+final ValueNotifier<ThemeMode> themeNotifier = ValueNotifier(ThemeMode.light);
 
-void main() {
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await dotenv.load(fileName: ".env");
+
+  // Load theme preference
+  final prefs = await SharedPreferences.getInstance();
+  final isDarkMode = prefs.getBool('isDarkMode') ?? false;
+  themeNotifier.value = isDarkMode ? ThemeMode.dark : ThemeMode.light;
+
+  // Init local notification
+  await NotificationService().init();
 
   // Tangkap error UI thread
   FlutterError.onError = (details) {
@@ -34,10 +47,8 @@ void main() {
 
   debugPrint('>>> Initializing Supabase...');
   supabaseInitializer = Supabase.initialize(
-    url: const String.fromEnvironment('SUPABASE_URL',
-        defaultValue: 'https://kuzzjapgtcclcdfkytol.supabase.co'),
-    anonKey: const String.fromEnvironment('SUPABASE_ANON_KEY',
-        defaultValue: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt1enpqYXBndGNjbGNkZmt5dG9sIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU4NTczMTMsImV4cCI6MjA5MTQzMzMxM30.iIRvQrzLZ-0aWCsLYWq3AQ_SyD5hymcXstlttkFM8II'),
+    url: dotenv.env['SUPABASE_URL'] ?? '',
+    anonKey: dotenv.env['SUPABASE_ANON_KEY'] ?? '',
   );
 
   runApp(const TicketingApp());
@@ -88,13 +99,18 @@ class TicketingApp extends StatelessWidget {
               BlocProvider(create: (ctx) => AuthBloc(authRepository: ctx.read<AuthRepository>())),
               BlocProvider(create: (ctx) => TicketBloc(ticketRepository: ctx.read<TicketRepository>())),
             ],
-            child: MaterialApp(
-              title: 'E-Ticketing Helpdesk',
-              debugShowCheckedModeBanner: false,
-              themeMode: ThemeMode.system,
-              theme: AppTheme.lightTheme,
-              darkTheme: AppTheme.darkTheme,
-              home: const SplashScreen(),
+            child: ValueListenableBuilder<ThemeMode>(
+              valueListenable: themeNotifier,
+              builder: (_, mode, __) {
+                return MaterialApp(
+                  title: 'E-Ticketing Helpdesk',
+                  debugShowCheckedModeBanner: false,
+                  themeMode: mode,
+                  theme: AppTheme.lightTheme,
+                  darkTheme: AppTheme.darkTheme,
+                  home: const SplashScreen(),
+                );
+              },
             ),
           ),
         );

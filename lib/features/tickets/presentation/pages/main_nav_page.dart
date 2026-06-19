@@ -4,6 +4,8 @@ import 'package:tiketdotcom/features/auth/presentation/pages/profile_page.dart';
 import 'package:tiketdotcom/features/tickets/presentation/pages/create_ticket_page.dart';
 import 'package:tiketdotcom/features/tickets/presentation/pages/dashboard_page.dart';
 import 'package:tiketdotcom/features/tickets/presentation/pages/ticket_list_page.dart';
+import 'package:tiketdotcom/core/services/notification_service.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class MainNavPage extends StatefulWidget {
   final int initialIndex;
@@ -27,12 +29,24 @@ class _MainNavPageState extends State<MainNavPage> {
   void initState() {
     super.initState();
     _currentIndex = widget.initialIndex;
+    
+    // Start listening to notifications
+    final user = Supabase.instance.client.auth.currentUser;
+    if (user != null) {
+      NotificationService().listenToSupabaseRealtime(user.id);
+    }
   }
 
   void _onTabTapped(int index) {
     setState(() {
       _currentIndex = index;
     });
+  }
+
+  @override
+  void dispose() {
+    NotificationService().stopListening();
+    super.dispose();
   }
 
   @override

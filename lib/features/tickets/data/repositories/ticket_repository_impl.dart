@@ -1,4 +1,4 @@
-﻿import 'dart:io';
+import 'dart:io';
 import 'dart:async';
 import 'package:dartz/dartz.dart';
 import '../../../../core/error/failures.dart';
@@ -16,9 +16,21 @@ class TicketRepositoryImpl implements TicketRepository {
   final Duration _timeout = const Duration(seconds: 10);
 
   @override
-  Future<Either<Failure, List<Ticket>>> getTickets({String? statusFilter}) async {
+  Future<Either<Failure, List<Ticket>>> getTickets({String? statusFilter, String? helpdeskFilter}) async {
     try {
-      final result = await dataSource.getTickets(statusFilter: statusFilter).timeout(_timeout);
+      final result = await dataSource.getTickets(statusFilter: statusFilter, helpdeskFilter: helpdeskFilter).timeout(_timeout);
+      return Right(result);
+    } on TimeoutException {
+      return Left(ServerFailure('Waktu tunggu habis. Periksa koneksi Anda.'));
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, Ticket>> getTicketById(String ticketId) async {
+    try {
+      final result = await dataSource.getTicketById(ticketId).timeout(_timeout);
       return Right(result);
     } on TimeoutException {
       return Left(ServerFailure('Waktu tunggu habis. Periksa koneksi Anda.'));
@@ -80,12 +92,60 @@ class TicketRepositoryImpl implements TicketRepository {
   }
 
   @override
-  Future<Either<Failure, void>> assignTicket(String ticketId, String helpdeskId) async {
+  Future<Either<Failure, void>> assignTicket(String ticketId, String helpdeskId, String helpdeskName) async {
     try {
-      await dataSource.assignTicket(ticketId, helpdeskId).timeout(_timeout);
+      await dataSource.assignTicket(ticketId, helpdeskId, helpdeskName).timeout(_timeout);
       return const Right(null);
     } on TimeoutException {
       return Left(ServerFailure('Waktu tunggu habis saat menugaskan tiket.'));
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, void>> acceptTicket(String ticketId) async {
+    try {
+      await dataSource.acceptTicket(ticketId).timeout(_timeout);
+      return const Right(null);
+    } on TimeoutException {
+      return Left(ServerFailure('Waktu tunggu habis saat menerima tiket.'));
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, void>> resolveTicket(String ticketId) async {
+    try {
+      await dataSource.resolveTicket(ticketId).timeout(_timeout);
+      return const Right(null);
+    } on TimeoutException {
+      return Left(ServerFailure('Waktu tunggu habis saat menyelesaikan tiket.'));
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, void>> cancelTicket(String ticketId) async {
+    try {
+      await dataSource.cancelTicket(ticketId).timeout(_timeout);
+      return const Right(null);
+    } on TimeoutException {
+      return Left(ServerFailure('Waktu tunggu habis saat membatalkan tiket.'));
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, void>> deleteTicket(String ticketId) async {
+    try {
+      await dataSource.deleteTicket(ticketId).timeout(_timeout);
+      return const Right(null);
+    } on TimeoutException {
+      return Left(ServerFailure('Waktu tunggu habis saat menghapus tiket.'));
     } catch (e) {
       return Left(ServerFailure(e.toString()));
     }

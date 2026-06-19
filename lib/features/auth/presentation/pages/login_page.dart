@@ -2,11 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:tiketdotcom/core/theme/app_theme.dart';
-import 'package:tiketdotcom/features/auth/domain/repositories/auth_repository.dart';
 import 'package:tiketdotcom/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:tiketdotcom/features/auth/presentation/bloc/auth_event.dart';
 import 'package:tiketdotcom/features/auth/presentation/bloc/auth_state.dart';
 import 'package:tiketdotcom/features/auth/presentation/pages/register_page.dart';
+import 'package:tiketdotcom/features/auth/presentation/pages/forgot_password_page.dart';
 import 'package:tiketdotcom/features/tickets/presentation/pages/main_nav_page.dart';
 
 class LoginPage extends StatefulWidget {
@@ -29,40 +29,7 @@ class _LoginPageState extends State<LoginPage> {
     super.dispose();
   }
 
-  void _showResetPasswordDialog() {
-    final resetEmailController = TextEditingController();
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Reset Password', style: TextStyle(fontWeight: FontWeight.w700)),
-        content: TextField(
-          controller: resetEmailController,
-          decoration: const InputDecoration(labelText: 'Email', prefixIcon: Icon(Icons.email_outlined)),
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Batal')),
-          ElevatedButton(
-            onPressed: () async {
-              if (resetEmailController.text.isNotEmpty) {
-                final authRepo = RepositoryProvider.of<AuthRepository>(context);
-                final navigator = Navigator.of(context);
-                final scaffoldMessenger = ScaffoldMessenger.of(context);
-                final result = await authRepo.resetPassword(resetEmailController.text.trim());
-                if (mounted) {
-                  result.fold(
-                    (failure) => scaffoldMessenger.showSnackBar(SnackBar(content: Text(failure.message))),
-                    (success) => scaffoldMessenger.showSnackBar(const SnackBar(content: Text('Email pemulihan dikirim!'))),
-                  );
-                  navigator.pop();
-                }
-              }
-            },
-            child: const Text('Kirim'),
-          ),
-        ],
-      ),
-    );
-  }
+
 
   @override
   Widget build(BuildContext context) {
@@ -158,7 +125,7 @@ class _LoginPageState extends State<LoginPage> {
                   Align(
                     alignment: Alignment.centerRight,
                     child: TextButton(
-                      onPressed: _showResetPasswordDialog,
+                      onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ForgotPasswordPage())),
                       child: Text('Lupa Password?', style: TextStyle(color: AppTheme.primaryDark, fontWeight: FontWeight.w600)),
                     ),
                   ),

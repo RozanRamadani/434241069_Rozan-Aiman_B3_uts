@@ -9,6 +9,12 @@ class Ticket extends Equatable {
   final DateTime createdAt;
   final String? attachmentUrl;
   final String? assignedTo;
+  final DateTime? assignedAt;
+  final DateTime? processedAt;
+  final DateTime? acceptedAt;
+  final DateTime? resolvedAt;
+  final DateTime? cancelledAt;
+  final String? assignedToName;
 
   const Ticket({
     required this.id,
@@ -19,8 +25,29 @@ class Ticket extends Equatable {
     required this.createdAt,
     this.attachmentUrl,
     this.assignedTo,
+    this.assignedAt,
+    this.processedAt,
+    this.acceptedAt,
+    this.resolvedAt,
+    this.cancelledAt,
+    this.assignedToName,
   });
 
   @override
-  List<Object?> get props => [id, title, description, category, status, createdAt, attachmentUrl, assignedTo];
+  List<Object?> get props => [
+        id, 
+        title, 
+        description, 
+        category, 
+        status, 
+        createdAt, 
+        attachmentUrl, 
+        assignedTo,
+        assignedAt,
+        processedAt,
+        acceptedAt,
+        resolvedAt,
+        cancelledAt,
+        assignedToName,
+      ];
 }

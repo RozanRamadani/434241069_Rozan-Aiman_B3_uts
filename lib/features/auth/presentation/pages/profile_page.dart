@@ -10,6 +10,9 @@ import 'package:tiketdotcom/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:tiketdotcom/features/auth/presentation/bloc/auth_event.dart';
 import 'package:tiketdotcom/features/auth/presentation/bloc/auth_state.dart';
 import 'package:tiketdotcom/features/auth/presentation/pages/login_page.dart';
+import 'package:tiketdotcom/features/auth/presentation/pages/admin_user_management_page.dart';
+import 'package:tiketdotcom/features/settings/presentation/pages/setting_page.dart';
+import 'package:tiketdotcom/features/tickets/presentation/pages/ticket_list_page.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -22,7 +25,26 @@ class _ProfilePageState extends State<ProfilePage> {
   final _supabase = Supabase.instance.client;
   bool _isLoading = false;
 
-  Future<void> _refresh() async => setState(() {});
+  Future<void> _refresh() async {
+    await _supabase.auth.refreshSession();
+    if (mounted) setState(() {});
+  }
+
+  Color _getRoleColor(String role) {
+    return switch (role) {
+      'admin'    => Colors.purple,
+      'helpdesk' => Colors.blue,
+      _          => Colors.green,
+    };
+  }
+
+  String _getRoleLabel(String role) {
+    return switch (role) {
+      'admin'    => '👑 Admin',
+      'helpdesk' => '🛠️ Helpdesk',
+      _          => '👤 User',
+    };
+  }
 
   void _showEditProfileDialog(BuildContext parentContext) {
     final user = _supabase.auth.currentUser;
@@ -109,29 +131,7 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
-  void _showNotificationSettings(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      builder: (context) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Center(child: Container(width: 40, height: 4, margin: const EdgeInsets.only(bottom: 20), decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(2)))),
-              Text('Pengaturan Notifikasi', style: GoogleFonts.plusJakartaSans(fontSize: 18, fontWeight: FontWeight.w700)),
-              const SizedBox(height: 16),
-              SwitchListTile(title: const Text('Notifikasi Tiket Baru'), subtitle: const Text('Dapatkan info saat helpdesk merespon'), value: true, onChanged: (v) {}),
-              SwitchListTile(title: const Text('Update Status'), subtitle: const Text('Info saat status tiket berubah'), value: true, onChanged: (v) {}),
-              const SizedBox(height: 16),
-              SizedBox(width: double.infinity, height: 48, child: ElevatedButton(onPressed: () => Navigator.pop(context), child: const Text('Selesai'))),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
+
 
   void _showLogoutDialog(BuildContext parentContext) {
     showDialog(
@@ -163,10 +163,13 @@ class _ProfilePageState extends State<ProfilePage> {
     final fullName = user?.userMetadata?['full_name'] ?? 'User';
     final email = user?.email ?? '-';
     final avatarUrl = user?.userMetadata?['avatar_url'];
+    final role = user?.userMetadata?['role'] ?? 'user';
 
     return BlocListener<AuthBloc, AuthState>(
-      listener: (context, state) {
+      listener: (context, state) async {
         if (state is AuthSuccess && (ModalRoute.of(context)?.isCurrent ?? false)) {
+          await _supabase.auth.refreshSession();
+          if (!context.mounted) return;
           setState(() => _isLoading = false);
           ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Profil berhasil diperbarui.'), backgroundColor: AppTheme.statusResolved));
         } else if (state is AuthFailure && (ModalRoute.of(context)?.isCurrent ?? false)) {
@@ -210,43 +213,68 @@ class _ProfilePageState extends State<ProfilePage> {
                           Text(fullName, style: GoogleFonts.plusJakartaSans(fontSize: 20, fontWeight: FontWeight.w800, color: AppTheme.textPrimary)),
                           const SizedBox(height: 4),
                           Text(email, style: TextStyle(color: AppTheme.primaryDark, fontSize: 14)),
+                          const SizedBox(height: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: _getRoleColor(role).withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: Text(
+                              _getRoleLabel(role),
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w700,
+                                color: _getRoleColor(role),
+                              ),
+                            ),
+                          ),
                         ],
                       ),
                     ),
                     const SizedBox(height: 36),
 
+                    Visibility(
+                      visible: role == 'admin',
+                      child: _ProfileMenuItem(
+                        title: 'Kelola Pengguna',
+                        subtitle: 'Aktifkan atau non-aktifkan akun pengguna',
+                        onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AdminUserManagementPage())),
+                      ),
+                    ),
+
                     // Menu items (matching reference)
                     _ProfileMenuItem(
                       title: 'Feed',
-                      subtitle: 'Track your all ticket',
-                      onTap: () {},
+                      subtitle: 'Lacak semua tiket Anda',
+                      onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const TicketListPage())),
                     ),
                     _ProfileMenuItem(
                       title: 'Dashboard',
-                      subtitle: 'See all analytic of your Ticket',
-                      onTap: () => Navigator.pop(context),
+                      subtitle: 'Lihat ringkasan tiket Anda',
+                      onTap: () => Navigator.of(context).popUntil((route) => route.isFirst),
                     ),
                     _ProfileMenuItem(
                       title: 'Edit Profil',
-                      subtitle: 'Change name and photo',
+                      subtitle: 'Ubah nama dan foto profil',
                       onTap: () => _showEditProfileDialog(context),
                     ),
                     _ProfileMenuItem(
                       title: 'Ubah Password',
-                      subtitle: 'Change your password',
+                      subtitle: 'Ganti kata sandi akun',
                       onTap: () => _showChangePasswordDialog(context),
                     ),
                     _ProfileMenuItem(
-                      title: 'Notifications Settings',
-                      subtitle: 'Setting your notification',
-                      onTap: () => _showNotificationSettings(context),
+                      title: 'Pengaturan',
+                      subtitle: 'Tampilan, Notifikasi, dan Info Aplikasi',
+                      onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SettingPage())),
                     ),
 
                     const SizedBox(height: 16),
                     // Logout
                     _ProfileMenuItem(
                       title: 'Keluar Aplikasi',
-                      subtitle: 'Logout from account',
+                      subtitle: 'Keluar dari akun',
                       isDestructive: true,
                       onTap: () => _showLogoutDialog(context),
                     ),

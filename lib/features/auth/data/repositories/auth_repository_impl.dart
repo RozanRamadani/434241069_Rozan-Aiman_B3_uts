@@ -1,4 +1,4 @@
-﻿import 'dart:io';
+import 'dart:io';
 import 'package:dartz/dartz.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' as supabase;
 import '../../../../core/error/failures.dart';
@@ -60,7 +60,7 @@ class AuthRepositoryImpl implements AuthRepository {
   }
 
   @override
-  Future<Either<Failure, void>> updatePassword(String newPassword) async {      
+  Future<Either<Failure, void>> updatePassword(String newPassword) async {
     try {
       await supabaseClient.auth.updateUser(
         supabase.UserAttributes(password: newPassword),
@@ -74,7 +74,10 @@ class AuthRepositoryImpl implements AuthRepository {
   }
 
   @override
-  Future<Either<Failure, void>> updateProfile({required String fullName, String? avatarPath}) async {
+  Future<Either<Failure, void>> updateProfile({
+    required String fullName,
+    String? avatarPath,
+  }) async {
     try {
       final user = supabaseClient.auth.currentUser;
       if (user == null) throw Exception('Not logged in');
@@ -84,13 +87,20 @@ class AuthRepositoryImpl implements AuthRepository {
       if (avatarPath != null) {
         final File file = File(avatarPath);
         final fileExt = file.path.split('.').last;
-        final fileName = '${user.id}_${DateTime.now().millisecondsSinceEpoch}.$fileExt';
+        final fileName =
+            '${user.id}_${DateTime.now().millisecondsSinceEpoch}.$fileExt';
 
         await supabaseClient.storage
             .from('avatars')
-            .upload(fileName, file, fileOptions: const supabase.FileOptions(upsert: true));
+            .upload(
+              fileName,
+              file,
+              fileOptions: const supabase.FileOptions(upsert: true),
+            );
 
-        avatarUrl = supabaseClient.storage.from('avatars').getPublicUrl(fileName);
+        avatarUrl = supabaseClient.storage
+            .from('avatars')
+            .getPublicUrl(fileName);
       }
 
       final Map<String, dynamic> data = {'full_name': fullName};
@@ -98,9 +108,7 @@ class AuthRepositoryImpl implements AuthRepository {
         data['avatar_url'] = avatarUrl;
       }
 
-      await supabaseClient.auth.updateUser(
-        supabase.UserAttributes(data: data),
-      );
+      await supabaseClient.auth.updateUser(supabase.UserAttributes(data: data));
 
       return const Right(null);
     } on supabase.AuthException catch (e) {
@@ -115,4 +123,3 @@ class AuthRepositoryImpl implements AuthRepository {
     await supabaseClient.auth.signOut();
   }
 }
-

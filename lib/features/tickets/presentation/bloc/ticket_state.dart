@@ -40,6 +40,14 @@ class StatusUpdated extends TicketState {}
 
 class TicketAssigned extends TicketState {}
 
+class TicketAccepted extends TicketState {}
+
+class TicketResolved extends TicketState {}
+
+class TicketCancelled extends TicketState {}
+
+class TicketDeleted extends TicketState {}
+
 class HelpdesksLoaded extends TicketState {
   final List<Map<String, dynamic>> helpdesks;
   const HelpdesksLoaded(this.helpdesks);
