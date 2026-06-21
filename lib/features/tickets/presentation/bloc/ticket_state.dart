@@ -14,10 +14,11 @@ class TicketLoading extends TicketState {}
 
 class TicketsLoaded extends TicketState {
   final List<Ticket> tickets;
-  const TicketsLoaded(this.tickets);
+  final bool hasMore;
+  const TicketsLoaded(this.tickets, {this.hasMore = true});
 
   @override
-  List<Object?> get props => [tickets];
+  List<Object?> get props => [tickets, hasMore];
 }
 
 class TicketError extends TicketState {
@@ -55,3 +56,4 @@ class HelpdesksLoaded extends TicketState {
   @override
   List<Object?> get props => [helpdesks];
 }
+

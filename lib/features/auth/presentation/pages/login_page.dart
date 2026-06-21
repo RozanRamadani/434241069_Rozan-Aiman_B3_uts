@@ -86,13 +86,13 @@ class _LoginPageState extends State<LoginPage> {
                   const SizedBox(height: 48),
 
                   // Welcome text
-                  Text('Selamat Datang 👋', style: GoogleFonts.plusJakartaSans(fontSize: 24, fontWeight: FontWeight.w800, color: AppTheme.textPrimary)),
+                  Text('Selamat Datang 👋', style: GoogleFonts.plusJakartaSans(fontSize: 24, fontWeight: FontWeight.w800, color: context.appTextPrimary)),
                   const SizedBox(height: 4),
-                  Text('Silakan login untuk akses layanan', style: TextStyle(color: AppTheme.textSecondary, fontSize: 14)),
+                  Text('Silakan login untuk akses layanan', style: TextStyle(color: context.appTextSecondary, fontSize: 14)),
                   const SizedBox(height: 32),
 
                   // Email
-                  Text('Email', style: GoogleFonts.plusJakartaSans(fontSize: 13, fontWeight: FontWeight.w600, color: AppTheme.textPrimary)),
+                  Text('Email', style: GoogleFonts.plusJakartaSans(fontSize: 13, fontWeight: FontWeight.w600, color: context.appTextPrimary)),
                   const SizedBox(height: 8),
                   TextFormField(
                     controller: _emailController,
@@ -106,7 +106,7 @@ class _LoginPageState extends State<LoginPage> {
                   const SizedBox(height: 20),
 
                   // Password
-                  Text('Password', style: GoogleFonts.plusJakartaSans(fontSize: 13, fontWeight: FontWeight.w600, color: AppTheme.textPrimary)),
+                  Text('Password', style: GoogleFonts.plusJakartaSans(fontSize: 13, fontWeight: FontWeight.w600, color: context.appTextPrimary)),
                   const SizedBox(height: 8),
                   TextFormField(
                     controller: _passwordController,
@@ -161,7 +161,7 @@ class _LoginPageState extends State<LoginPage> {
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Text('Belum punya akun? ', style: TextStyle(color: AppTheme.textSecondary)),
+                        Text('Belum punya akun? ', style: TextStyle(color: context.appTextSecondary)),
                         GestureDetector(
                           onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const RegisterPage())),
                           child: Text('Daftar Sekarang', style: TextStyle(color: AppTheme.primary, fontWeight: FontWeight.w700)),
@@ -178,3 +178,4 @@ class _LoginPageState extends State<LoginPage> {
     );
   }
 }
+

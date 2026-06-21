@@ -45,12 +45,8 @@ class _AdminUserManagementPageState extends State<AdminUserManagementPage> {
       // If it doesn't exist, this will throw an error, which we catch.
       await _supabase.from('profiles').update({'is_active': !currentStatus}).eq('id', userId);
       
-      setState(() {
-        final index = _users.indexWhere((u) => u['id'] == userId);
-        if (index != -1) {
-          _users[index]['is_active'] = !currentStatus;
-        }
-      });
+      await _fetchUsers();
+      
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Status pengguna berhasil diubah'), backgroundColor: AppTheme.statusResolved));
       }
@@ -69,7 +65,7 @@ class _AdminUserManagementPageState extends State<AdminUserManagementPage> {
     }).toList();
 
     return Scaffold(
-      backgroundColor: AppTheme.background,
+      backgroundColor: context.appBackground,
       appBar: AppBar(
         title: Text('Kelola Pengguna', style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w800, color: AppTheme.primaryDark)),
         centerTitle: true,
@@ -81,16 +77,16 @@ class _AdminUserManagementPageState extends State<AdminUserManagementPage> {
             child: Container(
               height: 48,
               padding: const EdgeInsets.symmetric(horizontal: 16),
-              decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(AppTheme.radiusPill)),
+              decoration: BoxDecoration(color: context.appCardColor, borderRadius: BorderRadius.circular(AppTheme.radiusPill)),
               child: Row(
                 children: [
-                  Icon(Icons.search_rounded, color: AppTheme.textMuted, size: 20),
+                  Icon(Icons.search_rounded, color: context.appTextMuted, size: 20),
                   const SizedBox(width: 10),
                   Expanded(
                     child: TextField(
                       decoration: InputDecoration(
                         hintText: 'Cari nama pengguna...',
-                        hintStyle: TextStyle(color: AppTheme.textMuted, fontSize: 13),
+                        hintStyle: TextStyle(color: context.appTextMuted, fontSize: 13),
                         border: InputBorder.none, enabledBorder: InputBorder.none, focusedBorder: InputBorder.none,
                       ),
                       onChanged: (v) => setState(() => _searchQuery = v),
@@ -115,7 +111,7 @@ class _AdminUserManagementPageState extends State<AdminUserManagementPage> {
                       return Container(
                         margin: const EdgeInsets.only(bottom: 12),
                         padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16), boxShadow: AppTheme.softShadow),
+                        decoration: BoxDecoration(color: context.appCardColor, borderRadius: BorderRadius.circular(16), boxShadow: context.appSoftShadow),
                         child: Row(
                           children: [
                             CircleAvatar(
@@ -182,3 +178,4 @@ class _AdminUserManagementPageState extends State<AdminUserManagementPage> {
     );
   }
 }
+

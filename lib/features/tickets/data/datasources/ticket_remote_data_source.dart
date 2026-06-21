@@ -5,7 +5,7 @@ import '../models/comment_model.dart';
 import '../models/ticket_history_model.dart';
 
 abstract class TicketRemoteDataSource {
-  Future<List<TicketModel>> getTickets({String? statusFilter, String? helpdeskFilter});
+  Future<List<TicketModel>> getTickets({String? statusFilter, String? helpdeskFilter, DateTime? cursor, int limit = 20});
   Future<TicketModel> getTicketById(String ticketId);
   Future<TicketModel> createTicket(TicketModel ticket, {File? imageFile, dynamic imageBytes, String? imageExt});      
   Future<List<Comment>> getComments(String ticketId);
@@ -48,7 +48,7 @@ class SupabaseTicketRemoteDataSourceImpl implements TicketRemoteDataSource {
   }
 
   @override
-  Future<List<TicketModel>> getTickets({String? statusFilter, String? helpdeskFilter}) async {
+  Future<List<TicketModel>> getTickets({String? statusFilter, String? helpdeskFilter, DateTime? cursor, int limit = 20}) async {
     try {
       final user = client.auth.currentUser;
       final role = user?.userMetadata?['role'] ?? 'user';
@@ -73,7 +73,11 @@ class SupabaseTicketRemoteDataSourceImpl implements TicketRemoteDataSource {
         query = query.eq('assigned_to', helpdeskFilter);
       }
 
-      final data = await query.order('created_at', ascending: false);
+      if (cursor != null) {
+        query = query.lt('created_at', cursor.toUtc().toIso8601String());
+      }
+
+      final data = await query.order('created_at', ascending: false).limit(limit);
       final ticketsList = data as List<dynamic>;
       
       // Collect unique profile IDs
@@ -275,4 +279,5 @@ class SupabaseTicketRemoteDataSourceImpl implements TicketRemoteDataSource {
     }).toList();
   }
 }
+
 

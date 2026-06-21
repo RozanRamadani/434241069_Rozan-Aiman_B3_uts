@@ -51,3 +51,4 @@ class Ticket extends Equatable {
         assignedToName,
       ];
 }
+

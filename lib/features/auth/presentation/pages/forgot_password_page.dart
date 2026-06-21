@@ -44,9 +44,9 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.background,
+      backgroundColor: context.appBackground,
       appBar: AppBar(
-        title: Text('Lupa Password', style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w800, color: AppTheme.textPrimary)),
+        title: Text('Lupa Password', style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w800, color: context.appTextPrimary)),
       ),
       body: SafeArea(
         child: SingleChildScrollView(
@@ -59,12 +59,12 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
                 const SizedBox(height: 20),
                 Icon(Icons.lock_reset_rounded, size: 64, color: AppTheme.primary),
                 const SizedBox(height: 24),
-                Text('Reset Password', style: GoogleFonts.plusJakartaSans(fontSize: 24, fontWeight: FontWeight.w800, color: AppTheme.textPrimary)),
+                Text('Reset Password', style: GoogleFonts.plusJakartaSans(fontSize: 24, fontWeight: FontWeight.w800, color: context.appTextPrimary)),
                 const SizedBox(height: 8),
-                Text('Masukkan email Anda yang terdaftar. Kami akan mengirimkan tautan untuk mengatur ulang kata sandi Anda.', style: TextStyle(color: AppTheme.textSecondary, fontSize: 14, height: 1.5)),
+                Text('Masukkan email Anda yang terdaftar. Kami akan mengirimkan tautan untuk mengatur ulang kata sandi Anda.', style: TextStyle(color: context.appTextSecondary, fontSize: 14, height: 1.5)),
                 const SizedBox(height: 32),
                 
-                Text('Email', style: GoogleFonts.plusJakartaSans(fontSize: 13, fontWeight: FontWeight.w600, color: AppTheme.textPrimary)),
+                Text('Email', style: GoogleFonts.plusJakartaSans(fontSize: 13, fontWeight: FontWeight.w600, color: context.appTextPrimary)),
                 const SizedBox(height: 8),
                 TextFormField(
                   controller: _emailController,
@@ -95,3 +95,4 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
     );
   }
 }
+

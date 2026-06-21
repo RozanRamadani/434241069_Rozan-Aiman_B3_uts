@@ -178,9 +178,9 @@ class _ProfilePageState extends State<ProfilePage> {
         }
       },
       child: Scaffold(
-        backgroundColor: AppTheme.background,
+        backgroundColor: context.appBackground,
         appBar: AppBar(
-          backgroundColor: AppTheme.background,
+          backgroundColor: context.appBackground,
           surfaceTintColor: Colors.transparent,
           leading: IconButton(
             icon: const Icon(Icons.close_rounded),
@@ -210,7 +210,7 @@ class _ProfilePageState extends State<ProfilePage> {
                                 : null,
                           ),
                           const SizedBox(height: 16),
-                          Text(fullName, style: GoogleFonts.plusJakartaSans(fontSize: 20, fontWeight: FontWeight.w800, color: AppTheme.textPrimary)),
+                          Text(fullName, style: GoogleFonts.plusJakartaSans(fontSize: 20, fontWeight: FontWeight.w800, color: context.appTextPrimary)),
                           const SizedBox(height: 4),
                           Text(email, style: TextStyle(color: AppTheme.primaryDark, fontSize: 14)),
                           const SizedBox(height: 8),
@@ -297,7 +297,7 @@ class _ProfilePageState extends State<ProfilePage> {
                             ],
                           ),
                           const SizedBox(height: 4),
-                          Text('Version 1.0.0', style: TextStyle(color: AppTheme.textMuted, fontSize: 12)),
+                          Text('Version 1.0.0', style: TextStyle(color: context.appTextMuted, fontSize: 12)),
                         ],
                       ),
                     ),
@@ -337,10 +337,10 @@ class _ProfileMenuItem extends StatelessWidget {
                     children: [
                       Text(title, style: GoogleFonts.plusJakartaSans(
                         fontSize: 15, fontWeight: FontWeight.w700,
-                        color: isDestructive ? AppTheme.statusCancelled : AppTheme.textPrimary,
+                        color: isDestructive ? AppTheme.statusCancelled : context.appTextPrimary,
                       )),
                       const SizedBox(height: 2),
-                      Text(subtitle, style: TextStyle(fontSize: 13, color: AppTheme.textMuted)),
+                      Text(subtitle, style: TextStyle(fontSize: 13, color: context.appTextMuted)),
                     ],
                   ),
                 ),
@@ -364,3 +364,4 @@ class _ProfileMenuItem extends StatelessWidget {
     );
   }
 }
+

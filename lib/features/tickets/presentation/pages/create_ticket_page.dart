@@ -131,16 +131,16 @@ class _CreateTicketPageState extends State<CreateTicketPage> {
                   ),
                 ),
                 const SizedBox(height: 20),
-                Center(child: Text('Ada yang bisa kami bantu?', style: GoogleFonts.plusJakartaSans(fontSize: 20, fontWeight: FontWeight.w800, color: AppTheme.textPrimary))),
+                Center(child: Text('Ada yang bisa kami bantu?', style: GoogleFonts.plusJakartaSans(fontSize: 20, fontWeight: FontWeight.w800, color: context.appTextPrimary))),
                 const SizedBox(height: 8),
                 Center(
                   child: Text('Berikan detail kendala Anda agar tim kami dapat segera memberikan solusi terbaik.',
-                  textAlign: TextAlign.center, style: TextStyle(color: AppTheme.textSecondary, fontSize: 13, height: 1.4)),
+                  textAlign: TextAlign.center, style: TextStyle(color: context.appTextSecondary, fontSize: 13, height: 1.4)),
                 ),
                 const SizedBox(height: 32),
 
                 // Kategori Masalah
-                Text('Kategori Masalah', style: GoogleFonts.plusJakartaSans(fontSize: 14, fontWeight: FontWeight.w700, color: AppTheme.textPrimary)),
+                Text('Kategori Masalah', style: GoogleFonts.plusJakartaSans(fontSize: 14, fontWeight: FontWeight.w700, color: context.appTextPrimary)),
                 const SizedBox(height: 12),
                 GridView.count(
                   crossAxisCount: 2,
@@ -157,14 +157,14 @@ class _CreateTicketPageState extends State<CreateTicketPage> {
                         decoration: BoxDecoration(
                           color: isSelected ? const Color(0xFFFFEDD5) : Colors.white,
                           borderRadius: BorderRadius.circular(24),
-                          border: Border.all(color: isSelected ? Colors.transparent : AppTheme.border),
+                          border: Border.all(color: isSelected ? Colors.transparent : context.appBorder),
                         ),
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Icon(cat['icon'], color: isSelected ? const Color(0xFF9A3412) : AppTheme.textSecondary, size: 18),
+                            Icon(cat['icon'], color: isSelected ? const Color(0xFF9A3412) : context.appTextSecondary, size: 18),
                             const SizedBox(width: 8),
-                            Text(cat['id'], style: GoogleFonts.plusJakartaSans(fontSize: 12, fontWeight: FontWeight.w700, color: isSelected ? const Color(0xFF9A3412) : AppTheme.textSecondary)),
+                            Text(cat['id'], style: GoogleFonts.plusJakartaSans(fontSize: 12, fontWeight: FontWeight.w700, color: isSelected ? const Color(0xFF9A3412) : context.appTextSecondary)),
                           ],
                         ),
                       ),
@@ -174,7 +174,7 @@ class _CreateTicketPageState extends State<CreateTicketPage> {
                 const SizedBox(height: 24),
 
                 // Judul
-                Text('Judul Laporan', style: GoogleFonts.plusJakartaSans(fontSize: 14, fontWeight: FontWeight.w700, color: AppTheme.textPrimary)),
+                Text('Judul Laporan', style: GoogleFonts.plusJakartaSans(fontSize: 14, fontWeight: FontWeight.w700, color: context.appTextPrimary)),
                 const SizedBox(height: 12),
                 TextFormField(
                   controller: _titleController,
@@ -184,7 +184,7 @@ class _CreateTicketPageState extends State<CreateTicketPage> {
                 const SizedBox(height: 24),
 
                 // Deskripsi
-                Text('Detail Kendala', style: GoogleFonts.plusJakartaSans(fontSize: 14, fontWeight: FontWeight.w700, color: AppTheme.textPrimary)),
+                Text('Detail Kendala', style: GoogleFonts.plusJakartaSans(fontSize: 14, fontWeight: FontWeight.w700, color: context.appTextPrimary)),
                 const SizedBox(height: 12),
                 TextFormField(
                   controller: _descriptionController,
@@ -195,7 +195,7 @@ class _CreateTicketPageState extends State<CreateTicketPage> {
                 const SizedBox(height: 24),
 
                 // Lampiran
-                Text('Lampiran Foto (Optional)', style: GoogleFonts.plusJakartaSans(fontSize: 14, fontWeight: FontWeight.w700, color: AppTheme.textPrimary)),
+                Text('Lampiran Foto (Optional)', style: GoogleFonts.plusJakartaSans(fontSize: 14, fontWeight: FontWeight.w700, color: context.appTextPrimary)),
                 const SizedBox(height: 12),
                 Row(
                   children: [
@@ -206,18 +206,18 @@ class _CreateTicketPageState extends State<CreateTicketPage> {
                         decoration: BoxDecoration(
                           color: Colors.white,
                           borderRadius: BorderRadius.circular(16),
-                          border: Border.all(color: AppTheme.border, width: 2, style: BorderStyle.none),
+                          border: Border.all(color: context.appBorder, width: 2, style: BorderStyle.none),
                         ),
                         child: CustomPaint(
-                          painter: _DottedBorderPainter(color: AppTheme.border),
+                          painter: _DottedBorderPainter(color: context.appBorder),
                           child: _imageBytes != null
                             ? ClipRRect(borderRadius: BorderRadius.circular(16), child: Image.memory(_imageBytes!, fit: BoxFit.cover))
                             : Column(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
-                                  Icon(Icons.camera_alt_rounded, color: AppTheme.textMuted, size: 24),
+                                  Icon(Icons.camera_alt_rounded, color: context.appTextMuted, size: 24),
                                   const SizedBox(height: 4),
-                                  Text('UPLOAD', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: AppTheme.textMuted)),
+                                  Text('UPLOAD', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: context.appTextMuted)),
                                 ],
                               ),
                         ),
@@ -229,23 +229,23 @@ class _CreateTicketPageState extends State<CreateTicketPage> {
                         onTap: () => setState(() { _selectedImage = null; _imageBytes = null; }),
                         child: Container(
                           width: 80, height: 80,
-                          decoration: BoxDecoration(color: AppTheme.inputFill, borderRadius: BorderRadius.circular(16)),
+                          decoration: BoxDecoration(color: context.appInputFill, borderRadius: BorderRadius.circular(16)),
                           child: const Icon(Icons.delete_rounded, color: AppTheme.statusCancelled),
                         ),
                       )
                     else ...[
-                      Container(width: 80, height: 80, decoration: BoxDecoration(color: AppTheme.inputFill, borderRadius: BorderRadius.circular(16))),
+                      Container(width: 80, height: 80, decoration: BoxDecoration(color: context.appInputFill, borderRadius: BorderRadius.circular(16))),
                       const SizedBox(width: 12),
-                      Container(width: 80, height: 80, decoration: BoxDecoration(color: AppTheme.inputFill, borderRadius: BorderRadius.circular(16))),
+                      Container(width: 80, height: 80, decoration: BoxDecoration(color: context.appInputFill, borderRadius: BorderRadius.circular(16))),
                     ]
                   ],
                 ),
                 const SizedBox(height: 8),
-                Text('Format: JPG, PNG. Maksimal 5MB per file.', style: TextStyle(color: AppTheme.textMuted, fontSize: 11, fontStyle: FontStyle.italic)),
+                Text('Format: JPG, PNG. Maksimal 5MB per file.', style: TextStyle(color: context.appTextMuted, fontSize: 11, fontStyle: FontStyle.italic)),
                 const SizedBox(height: 24),
 
                 // Prioritas
-                Text('Prioritas', style: GoogleFonts.plusJakartaSans(fontSize: 14, fontWeight: FontWeight.w700, color: AppTheme.textPrimary)),
+                Text('Prioritas', style: GoogleFonts.plusJakartaSans(fontSize: 14, fontWeight: FontWeight.w700, color: context.appTextPrimary)),
                 const SizedBox(height: 12),
                 Row(
                   children: _priorities.map((p) {
@@ -257,11 +257,11 @@ class _CreateTicketPageState extends State<CreateTicketPage> {
                           margin: const EdgeInsets.only(right: 8),
                           padding: const EdgeInsets.symmetric(vertical: 12),
                           decoration: BoxDecoration(
-                            color: isSelected ? const Color(0xFFFFEDD5) : AppTheme.inputFill,
+                            color: isSelected ? const Color(0xFFFFEDD5) : context.appInputFill,
                             borderRadius: BorderRadius.circular(16),
                           ),
                           alignment: Alignment.center,
-                          child: Text(p, style: GoogleFonts.plusJakartaSans(fontSize: 13, fontWeight: FontWeight.w800, color: isSelected ? const Color(0xFF9A3412) : AppTheme.textPrimary)),
+                          child: Text(p, style: GoogleFonts.plusJakartaSans(fontSize: 13, fontWeight: FontWeight.w800, color: isSelected ? const Color(0xFF9A3412) : context.appTextPrimary)),
                         ),
                       ),
                     );
@@ -296,7 +296,7 @@ class _CreateTicketPageState extends State<CreateTicketPage> {
                   child: Text.rich(TextSpan(children: [
                     const TextSpan(text: 'Estimasi waktu respon: '),
                     TextSpan(text: '2 - 4 Jam Kerja', style: TextStyle(fontWeight: FontWeight.w800, color: AppTheme.primaryDark)),
-                  ]), style: TextStyle(fontSize: 12, color: AppTheme.textSecondary)),
+                  ]), style: TextStyle(fontSize: 12, color: context.appTextSecondary)),
                 ),
                 const SizedBox(height: 32),
               ],
@@ -329,3 +329,4 @@ class _DottedBorderPainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
+

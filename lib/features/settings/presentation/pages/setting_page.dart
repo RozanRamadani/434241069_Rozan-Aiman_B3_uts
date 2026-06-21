@@ -56,10 +56,10 @@ class _SettingPageState extends State<SettingPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.background,
+      backgroundColor: context.appBackground,
       appBar: AppBar(
-        title: Text('Pengaturan', style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w800, color: AppTheme.textPrimary)),
-        iconTheme: IconThemeData(color: AppTheme.textPrimary),
+        title: Text('Pengaturan', style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w800, color: context.appTextPrimary)),
+        iconTheme: IconThemeData(color: context.appTextPrimary),
       ),
       body: ListView(
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
@@ -71,11 +71,11 @@ class _SettingPageState extends State<SettingPage> {
             onChanged: _toggleDarkMode,
           ),
           ListTile(
-            title: Text('Ukuran Font', style: TextStyle(color: AppTheme.textPrimary)),
+            title: Text('Ukuran Font', style: TextStyle(color: context.appTextPrimary)),
             trailing: DropdownButton<String>(
               value: _fontSize,
-              dropdownColor: AppTheme.background,
-              style: TextStyle(color: AppTheme.textPrimary),
+              dropdownColor: context.appBackground,
+              style: TextStyle(color: context.appTextPrimary),
               underline: const SizedBox(),
               items: ['Normal', 'Besar'].map((String value) {
                 return DropdownMenuItem<String>(
@@ -122,16 +122,16 @@ class _SettingPageState extends State<SettingPage> {
           const SizedBox(height: 24),
           _buildSectionHeader('ℹ️ Tentang Aplikasi'),
           ListTile(
-            title: Text('Versi Aplikasi', style: TextStyle(color: AppTheme.textPrimary)),
-            trailing: Text('2.0.0', style: TextStyle(color: AppTheme.textSecondary, fontWeight: FontWeight.w600)),
+            title: Text('Versi Aplikasi', style: TextStyle(color: context.appTextPrimary)),
+            trailing: Text('2.0.0', style: TextStyle(color: context.appTextSecondary, fontWeight: FontWeight.w600)),
           ),
           ListTile(
-            title: Text('Nama Developer', style: TextStyle(color: AppTheme.textPrimary)),
-            trailing: Text('Helpdesk Team', style: TextStyle(color: AppTheme.textSecondary, fontWeight: FontWeight.w600)),
+            title: Text('Nama Developer', style: TextStyle(color: context.appTextPrimary)),
+            trailing: Text('Helpdesk Team', style: TextStyle(color: context.appTextSecondary, fontWeight: FontWeight.w600)),
           ),
           ListTile(
-            title: Text('Universitas', style: TextStyle(color: AppTheme.textPrimary)),
-            trailing: Text('Universitas Airlangga', style: TextStyle(color: AppTheme.textSecondary, fontWeight: FontWeight.w600)),
+            title: Text('Universitas', style: TextStyle(color: context.appTextPrimary)),
+            trailing: Text('Universitas Airlangga', style: TextStyle(color: context.appTextSecondary, fontWeight: FontWeight.w600)),
           ),
         ],
       ),
@@ -154,10 +154,11 @@ class _SettingPageState extends State<SettingPage> {
 
   Widget _buildSwitchTile({required String title, required bool value, required ValueChanged<bool> onChanged, bool enabled = true}) {
     return SwitchListTile(
-      title: Text(title, style: TextStyle(color: enabled ? AppTheme.textPrimary : AppTheme.textMuted)),
+      title: Text(title, style: TextStyle(color: enabled ? context.appTextPrimary : context.appTextMuted)),
       value: value,
       onChanged: enabled ? onChanged : null,
       activeThumbColor: AppTheme.primary,
     );
   }
 }
+

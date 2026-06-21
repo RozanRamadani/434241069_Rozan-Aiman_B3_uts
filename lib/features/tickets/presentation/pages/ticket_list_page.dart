@@ -56,7 +56,7 @@ class _TicketListPageState extends State<TicketListPage> {
     return DefaultTabController(
       length: 3,
       child: Scaffold(
-        backgroundColor: AppTheme.background,
+        backgroundColor: context.appBackground,
         appBar: AppBar(
           automaticallyImplyLeading: false,
           toolbarHeight: 70,
@@ -83,7 +83,7 @@ class _TicketListPageState extends State<TicketListPage> {
           children: [
             // Search & Tabs
             Container(
-              color: AppTheme.background,
+              color: context.appBackground,
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
               child: Column(
                 children: [
@@ -91,17 +91,17 @@ class _TicketListPageState extends State<TicketListPage> {
                   Container(
                     height: 48,
                     padding: const EdgeInsets.symmetric(horizontal: 16),
-                    decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(AppTheme.radiusPill)),
+                    decoration: BoxDecoration(color: context.appCardColor, borderRadius: BorderRadius.circular(AppTheme.radiusPill)),
                     child: Row(
                       children: [
-                        Icon(Icons.search_rounded, color: AppTheme.textMuted, size: 20),
+                        Icon(Icons.search_rounded, color: context.appTextMuted, size: 20),
                         const SizedBox(width: 10),
                         Expanded(
                           child: TextField(
                             controller: _searchController,
                             decoration: InputDecoration(
                               hintText: 'Cari tiket bantuan...',
-                              hintStyle: TextStyle(color: AppTheme.textMuted, fontSize: 13),
+                              hintStyle: TextStyle(color: context.appTextMuted, fontSize: 13),
                               border: InputBorder.none, enabledBorder: InputBorder.none, focusedBorder: InputBorder.none,
                               contentPadding: const EdgeInsets.only(bottom: 12), // align with icon
                             ),
@@ -118,13 +118,13 @@ class _TicketListPageState extends State<TicketListPage> {
                     Container(
                       height: 48,
                       padding: const EdgeInsets.symmetric(horizontal: 16),
-                      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(AppTheme.radiusPill)),
+                      decoration: BoxDecoration(color: context.appCardColor, borderRadius: BorderRadius.circular(AppTheme.radiusPill)),
                       child: DropdownButtonHideUnderline(
                         child: DropdownButton<String?>(
                           isExpanded: true,
                           value: _selectedHelpdesk,
-                          hint: Text('Semua Helpdesk', style: TextStyle(color: AppTheme.textMuted, fontSize: 13)),
-                          icon: Icon(Icons.arrow_drop_down_rounded, color: AppTheme.textMuted),
+                          hint: Text('Semua Helpdesk', style: TextStyle(color: context.appTextMuted, fontSize: 13)),
+                          icon: Icon(Icons.arrow_drop_down_rounded, color: context.appTextMuted),
                           items: [
                             DropdownMenuItem<String?>(
                               value: null,
@@ -146,11 +146,11 @@ class _TicketListPageState extends State<TicketListPage> {
                   // Tabs
                   Container(
                     height: 44,
-                    decoration: BoxDecoration(color: AppTheme.inputFill, borderRadius: BorderRadius.circular(12)),
+                    decoration: BoxDecoration(color: context.appInputFill, borderRadius: BorderRadius.circular(12)),
                     child: TabBar(
-                      indicator: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12), boxShadow: AppTheme.softShadow),
+                      indicator: BoxDecoration(color: context.appCardColor, borderRadius: BorderRadius.circular(12), boxShadow: context.appSoftShadow),
                       labelColor: AppTheme.primaryDark,
-                      unselectedLabelColor: AppTheme.textSecondary,
+                      unselectedLabelColor: context.appTextSecondary,
                       labelStyle: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w700, fontSize: 13),
                       unselectedLabelStyle: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w600, fontSize: 13),
                       indicatorSize: TabBarIndicatorSize.tab,
@@ -189,10 +189,30 @@ class _TicketTab extends StatefulWidget {
 }
 
 class _TicketTabState extends State<_TicketTab> {
+  final _scrollController = ScrollController();
+  bool _isLoadingMore = false;
+
   @override
   void initState() {
     super.initState();
     context.read<TicketBloc>().add(FetchTickets(statusFilter: widget.statusFilter, helpdeskFilter: widget.helpdeskFilter));
+    _scrollController.addListener(_onScroll);
+  }
+
+  void _onScroll() {
+    if (_scrollController.position.pixels >= _scrollController.position.maxScrollExtent - 200) {
+      final state = context.read<TicketBloc>().state;
+      if (state is TicketsLoaded && state.hasMore && !_isLoadingMore) {
+        _isLoadingMore = true;
+        final lastTicket = state.tickets.last;
+        context.read<TicketBloc>().add(FetchTickets(
+          statusFilter: widget.statusFilter,
+          helpdeskFilter: widget.helpdeskFilter,
+          cursor: lastTicket.createdAt,
+          isLoadMore: true,
+        ));
+      }
+    }
   }
 
   @override
@@ -201,6 +221,12 @@ class _TicketTabState extends State<_TicketTab> {
     if (oldWidget.helpdeskFilter != widget.helpdeskFilter) {
       context.read<TicketBloc>().add(FetchTickets(statusFilter: widget.statusFilter, helpdeskFilter: widget.helpdeskFilter));
     }
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
   }
 
   String _formatDate(DateTime time) {
@@ -221,6 +247,7 @@ class _TicketTabState extends State<_TicketTab> {
         }
 
         if (state is TicketsLoaded) {
+          _isLoadingMore = false; // reset flag
           final filtered = state.tickets.where((t) => t.title.toLowerCase().contains(widget.searchQuery)).toList();
 
           if (filtered.isEmpty) {
@@ -230,7 +257,7 @@ class _TicketTabState extends State<_TicketTab> {
                 children: [
                   Icon(widget.searchQuery.isEmpty ? Icons.inbox_rounded : Icons.search_off_rounded, size: 56, color: Colors.grey[300]),
                   const SizedBox(height: 12),
-                  Text(widget.searchQuery.isEmpty ? 'Tidak ada tiket.' : 'Tiket tidak ditemukan.', style: TextStyle(color: AppTheme.textMuted)),
+                  Text(widget.searchQuery.isEmpty ? 'Tidak ada tiket.' : 'Tiket tidak ditemukan.', style: TextStyle(color: context.appTextMuted)),
                 ],
               ),
             );
@@ -239,10 +266,22 @@ class _TicketTabState extends State<_TicketTab> {
           return RefreshIndicator(
             onRefresh: () async => context.read<TicketBloc>().add(FetchTickets(statusFilter: widget.statusFilter, helpdeskFilter: widget.helpdeskFilter)),
             child: ListView.separated(
+              controller: _scrollController,
               padding: const EdgeInsets.fromLTRB(20, 16, 20, 100),
-              itemCount: filtered.length,
+              itemCount: filtered.length + 1,
               separatorBuilder: (_, i) => const SizedBox(height: 16),
               itemBuilder: (context, index) {
+                if (index >= filtered.length) {
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 16.0),
+                    child: Center(
+                      child: state.hasMore 
+                        ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2.5)) 
+                        : Text('Semua tiket sudah dimuat', style: TextStyle(color: context.appTextMuted, fontSize: 13, fontWeight: FontWeight.w600)),
+                    ),
+                  );
+                }
+
                 final ticket = filtered[index];
                 final statusColor = AppTheme.statusColor(ticket.status);
                 final statusBg = AppTheme.statusBgColor(ticket.status);
@@ -259,9 +298,9 @@ class _TicketTabState extends State<_TicketTab> {
                     Container(
                       padding: const EdgeInsets.all(20),
                       decoration: BoxDecoration(
-                        color: Colors.white,
+                        color: context.appCardColor,
                         borderRadius: BorderRadius.circular(24),
-                        boxShadow: AppTheme.cardShadow,
+                        boxShadow: context.appCardShadow,
                       ),
                       child: InkWell(
                         borderRadius: BorderRadius.circular(24),
@@ -280,23 +319,23 @@ class _TicketTabState extends State<_TicketTab> {
                                   child: Text(displayStatus, style: TextStyle(fontSize: 9, fontWeight: FontWeight.w800, color: statusColor, letterSpacing: 0.5)),
                                 ),
                                 const Spacer(),
-                                Text(shortId, style: TextStyle(fontSize: 12, color: AppTheme.textSecondary, fontWeight: FontWeight.w600)),
+                                Text(shortId, style: TextStyle(fontSize: 12, color: context.appTextSecondary, fontWeight: FontWeight.w600)),
                               ],
                             ),
                             const SizedBox(height: 14),
                             // Title
-                            Text(ticket.title, style: GoogleFonts.plusJakartaSans(fontSize: 16, fontWeight: FontWeight.w800, color: AppTheme.textPrimary, height: 1.3), maxLines: 2, overflow: TextOverflow.ellipsis),
+                            Text(ticket.title, style: GoogleFonts.plusJakartaSans(fontSize: 16, fontWeight: FontWeight.w800, color: context.appTextPrimary, height: 1.3), maxLines: 2, overflow: TextOverflow.ellipsis),
                             const SizedBox(height: 16),
                             // Footer (Category & Date)
                             Row(
                               children: [
-                                Icon(Icons.category_rounded, size: 14, color: AppTheme.textSecondary),
+                                Icon(Icons.category_rounded, size: 14, color: context.appTextSecondary),
                                 const SizedBox(width: 6),
-                                Text(ticket.category, style: TextStyle(fontSize: 12, color: AppTheme.textSecondary, fontWeight: FontWeight.w600)),
-                                const SizedBox(width: 16),
-                                Icon(Icons.calendar_today_rounded, size: 14, color: AppTheme.textSecondary),
+                                Text(ticket.category, style: TextStyle(fontSize: 12, color: context.appTextSecondary, fontWeight: FontWeight.w600)),
+                                const Spacer(),
+                                Icon(Icons.calendar_today_rounded, size: 14, color: context.appTextSecondary),
                                 const SizedBox(width: 6),
-                                Text(_formatDate(ticket.createdAt), style: TextStyle(fontSize: 12, color: AppTheme.textSecondary, fontWeight: FontWeight.w600)),
+                                Text(_formatDate(ticket.createdAt), style: TextStyle(fontSize: 12, color: context.appTextSecondary, fontWeight: FontWeight.w600)),
                               ],
                             ),
                           ],
@@ -331,7 +370,7 @@ class _TicketTabState extends State<_TicketTab> {
                   const SizedBox(height: 12),
                   Text(
                     state.message,
-                    style: TextStyle(color: AppTheme.textMuted, fontSize: 13),
+                    style: TextStyle(color: context.appTextMuted, fontSize: 13),
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 16),
@@ -350,3 +389,4 @@ class _TicketTabState extends State<_TicketTab> {
     );
   }
 }
+

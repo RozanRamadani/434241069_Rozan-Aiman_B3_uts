@@ -17,15 +17,16 @@ class TicketTrackingTimeline extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(24),
-        boxShadow: AppTheme.cardShadow,
+        boxShadow: context.appCardShadow,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('PROGRESS PENANGANAN', style: GoogleFonts.plusJakartaSans(fontSize: 10, fontWeight: FontWeight.w800, color: AppTheme.textSecondary, letterSpacing: 1.5)),
+          Text('PROGRESS PENANGANAN', style: GoogleFonts.plusJakartaSans(fontSize: 10, fontWeight: FontWeight.w800, color: context.appTextSecondary, letterSpacing: 1.5)),
           const SizedBox(height: 16),
           
           _buildStep(
+            context,
             'Tiket Dibuat',
             ticket.createdAt,
             isActive: true,
@@ -34,6 +35,7 @@ class TicketTrackingTimeline extends StatelessWidget {
           
           if (ticket.status == 'Dibatalkan' && ticket.cancelledAt != null)
              _buildStep(
+               context,
                'Tiket Dibatalkan', 
                ticket.cancelledAt, 
                isActive: true, 
@@ -42,6 +44,7 @@ class TicketTrackingTimeline extends StatelessWidget {
              )
           else ...[
             _buildStep(
+              context,
               ticket.assignedToName != null ? 'Ditugaskan ke: ${ticket.assignedToName}' : 'Ditugaskan',
               ticket.assignedAt,
               isActive: ticket.assignedAt != null || _isStepActive(['Ditugaskan', 'Sedang Diproses', 'Selesai']),
@@ -49,6 +52,7 @@ class TicketTrackingTimeline extends StatelessWidget {
             ),
 
             _buildStep(
+              context,
               'Sedang Diproses',
               ticket.acceptedAt ?? ticket.processedAt,
               isActive: ticket.acceptedAt != null || ticket.processedAt != null || _isStepActive(['Sedang Diproses', 'Selesai']),
@@ -56,6 +60,7 @@ class TicketTrackingTimeline extends StatelessWidget {
             ),
 
             _buildStep(
+              context,
               'Selesai',
               ticket.resolvedAt,
               isActive: ticket.resolvedAt != null || _isStepActive(['Selesai']),
@@ -71,9 +76,9 @@ class TicketTrackingTimeline extends StatelessWidget {
     return statuses.contains(ticket.status);
   }
 
-  Widget _buildStep(String title, DateTime? timestamp, {bool isActive = false, bool isLast = false, bool isError = false}) {
+  Widget _buildStep(BuildContext context, String title, DateTime? timestamp, {bool isActive = false, bool isLast = false, bool isError = false}) {
     final dateFormat = DateFormat('dd MMM yyyy • HH:mm');
-    final Color color = isError ? AppTheme.statusCancelled : (isActive ? AppTheme.primaryDark : AppTheme.textMuted.withValues(alpha: 0.5));
+    final Color color = isError ? AppTheme.statusCancelled : (isActive ? AppTheme.primaryDark : context.appTextMuted.withValues(alpha: 0.5));
     
     return IntrinsicHeight(
       child: Row(
@@ -95,7 +100,7 @@ class TicketTrackingTimeline extends StatelessWidget {
                 Container(
                   width: 2,
                   height: 48,
-                  color: isActive ? color : AppTheme.border,
+                  color: isActive ? color : context.appBorder,
                   margin: const EdgeInsets.symmetric(vertical: 4),
                 )
             ],
@@ -110,18 +115,18 @@ class TicketTrackingTimeline extends StatelessWidget {
                   style: GoogleFonts.plusJakartaSans(
                     fontSize: 14,
                     fontWeight: isActive ? FontWeight.bold : FontWeight.w600,
-                    color: isActive ? color : AppTheme.textMuted,
+                    color: isActive ? color : context.appTextMuted,
                   ),
                 ),
                 const SizedBox(height: 4),
                 if (timestamp != null)
                   Row(
                     children: [
-                      Icon(Icons.calendar_month_rounded, size: 14, color: AppTheme.textMuted),
+                      Icon(Icons.calendar_month_rounded, size: 14, color: context.appTextMuted),
                       const SizedBox(width: 4),
                       Text(
                         dateFormat.format(timestamp.toLocal()),
-                        style: TextStyle(fontSize: 12, color: AppTheme.textMuted),
+                        style: TextStyle(fontSize: 12, color: context.appTextMuted),
                       ),
                     ],
                   ),
@@ -134,3 +139,4 @@ class TicketTrackingTimeline extends StatelessWidget {
     );
   }
 }
+

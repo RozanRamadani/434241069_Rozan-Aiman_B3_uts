@@ -64,13 +64,13 @@ class _RegisterPageState extends State<RegisterPage> {
                     ),
                   ),
                   const SizedBox(height: 24),
-                  Center(child: Text('Buat Akun Baru', style: GoogleFonts.plusJakartaSans(fontSize: 22, fontWeight: FontWeight.w800, color: AppTheme.textPrimary))),
+                  Center(child: Text('Buat Akun Baru', style: GoogleFonts.plusJakartaSans(fontSize: 22, fontWeight: FontWeight.w800, color: context.appTextPrimary))),
                   const SizedBox(height: 4),
-                  Center(child: Text('Lengkapi data diri Anda', style: TextStyle(color: AppTheme.textSecondary, fontSize: 14))),
+                  Center(child: Text('Lengkapi data diri Anda', style: TextStyle(color: context.appTextSecondary, fontSize: 14))),
                   const SizedBox(height: 36),
 
                   // Name
-                  Text('Nama Lengkap', style: GoogleFonts.plusJakartaSans(fontSize: 13, fontWeight: FontWeight.w600, color: AppTheme.textPrimary)),
+                  Text('Nama Lengkap', style: GoogleFonts.plusJakartaSans(fontSize: 13, fontWeight: FontWeight.w600, color: context.appTextPrimary)),
                   const SizedBox(height: 8),
                   TextFormField(
                     controller: _nameController,
@@ -81,7 +81,7 @@ class _RegisterPageState extends State<RegisterPage> {
                   const SizedBox(height: 20),
 
                   // Email
-                  Text('Email', style: GoogleFonts.plusJakartaSans(fontSize: 13, fontWeight: FontWeight.w600, color: AppTheme.textPrimary)),
+                  Text('Email', style: GoogleFonts.plusJakartaSans(fontSize: 13, fontWeight: FontWeight.w600, color: context.appTextPrimary)),
                   const SizedBox(height: 8),
                   TextFormField(
                     controller: _emailController,
@@ -92,7 +92,7 @@ class _RegisterPageState extends State<RegisterPage> {
                   const SizedBox(height: 20),
 
                   // Password
-                  Text('Password', style: GoogleFonts.plusJakartaSans(fontSize: 13, fontWeight: FontWeight.w600, color: AppTheme.textPrimary)),
+                  Text('Password', style: GoogleFonts.plusJakartaSans(fontSize: 13, fontWeight: FontWeight.w600, color: context.appTextPrimary)),
                   const SizedBox(height: 8),
                   TextFormField(
                     controller: _passwordController,
@@ -137,7 +137,7 @@ class _RegisterPageState extends State<RegisterPage> {
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Text('Sudah punya akun? ', style: TextStyle(color: AppTheme.textSecondary)),
+                        Text('Sudah punya akun? ', style: TextStyle(color: context.appTextSecondary)),
                         GestureDetector(
                           onTap: () => Navigator.pop(context),
                           child: Text('Masuk', style: TextStyle(color: AppTheme.primary, fontWeight: FontWeight.w700)),
@@ -154,3 +154,4 @@ class _RegisterPageState extends State<RegisterPage> {
     );
   }
 }
+

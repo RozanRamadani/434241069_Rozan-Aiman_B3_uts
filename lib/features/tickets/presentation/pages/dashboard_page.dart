@@ -17,7 +17,7 @@ class DashboardPage extends StatefulWidget {
 
 class _DashboardPageState extends State<DashboardPage> {
   final supabase = Supabase.instance.client;
-  late Stream<List<Map<String, dynamic>>> _ticketsStream;
+  late Future<Map<String, dynamic>> _dashboardDataFuture;
   String? _userRole;
   String? _userId;
 
@@ -27,26 +27,39 @@ class _DashboardPageState extends State<DashboardPage> {
     final user = supabase.auth.currentUser;
     _userId = user?.id;
     _userRole = user?.userMetadata?['role'] ?? 'user';
-    _ticketsStream = _getTicketsStream(_userId, _userRole!);
+    _dashboardDataFuture = _fetchDashboardData();
   }
 
-  Stream<List<Map<String, dynamic>>> _getTicketsStream(String? userId, String role) {
-    if (userId == null) return const Stream.empty();
-    if (role == 'user') {
-      return supabase.from('tickets').stream(primaryKey: ['id']).eq('user_id', userId).order('created_at', ascending: false);
-    } else if (role == 'helpdesk') {
-      return supabase.from('tickets').stream(primaryKey: ['id']).eq('assigned_to', userId).order('created_at', ascending: false);
-    } else {
-      return supabase.from('tickets').stream(primaryKey: ['id']).order('created_at', ascending: false);
+  Future<Map<String, dynamic>> _fetchDashboardData() async {
+    if (_userId == null) return {'stats': [], 'recent': []};
+
+    var statsQuery = supabase.from('tickets').select('status');
+    var recentQuery = supabase.from('tickets').select();
+
+    if (_userRole == 'user') {
+      statsQuery = statsQuery.eq('user_id', _userId!);
+      recentQuery = recentQuery.eq('user_id', _userId!);
+    } else if (_userRole == 'helpdesk') {
+      statsQuery = statsQuery.eq('assigned_to', _userId!);
+      recentQuery = recentQuery.eq('assigned_to', _userId!);
     }
+
+    final results = await Future.wait([
+      statsQuery, 
+      recentQuery.order('created_at', ascending: false).limit(10)
+    ]);
+    return {
+      'stats': results[0] as List<dynamic>,
+      'recent': results[1] as List<dynamic>
+    };
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.background,
-      body: StreamBuilder<List<Map<String, dynamic>>>(
-        stream: _ticketsStream,
+      backgroundColor: context.appBackground,
+      body: FutureBuilder<Map<String, dynamic>>(
+        future: _dashboardDataFuture,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return _buildLoadingState();
@@ -54,8 +67,20 @@ class _DashboardPageState extends State<DashboardPage> {
           if (snapshot.hasError) {
             return _buildErrorState(snapshot.error.toString());
           }
-          final tickets = snapshot.data ?? [];
-          return _buildBody(context, tickets, _userRole!);
+          
+          final data = snapshot.data ?? {'stats': [], 'recent': []};
+          final stats = List<Map<String, dynamic>>.from(data['stats'] as List<dynamic>);
+          final recentTickets = List<Map<String, dynamic>>.from(data['recent'] as List<dynamic>);
+          
+          return RefreshIndicator(
+            onRefresh: () async {
+              setState(() {
+                _dashboardDataFuture = _fetchDashboardData();
+              });
+              await _dashboardDataFuture;
+            },
+            child: _buildBody(context, stats, recentTickets, _userRole!),
+          );
         },
       ),
     );
@@ -109,25 +134,22 @@ class _DashboardPageState extends State<DashboardPage> {
           const SizedBox(height: 16),
           Text('Terjadi kesalahan', style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w700, fontSize: 16)),
           const SizedBox(height: 4),
-          Padding(padding: const EdgeInsets.symmetric(horizontal: 40), child: Text(msg, textAlign: TextAlign.center, style: TextStyle(color: AppTheme.textMuted, fontSize: 13))),
+          Padding(padding: const EdgeInsets.symmetric(horizontal: 40), child: Text(msg, textAlign: TextAlign.center, style: TextStyle(color: context.appTextMuted, fontSize: 13))),
         ],
       ),
     );
   }
 
-  Widget _buildBody(BuildContext context, List<Map<String, dynamic>> tickets, String role) {
-    int total = tickets.length;
-    int openCount = tickets.where((t) => t['status'] == 'Menunggu Antrean').length;
-    int assigned = tickets.where((t) => t['status'] == 'Ditugaskan').length;
-    int inProgress = tickets.where((t) => t['status'] == 'Sedang Diproses').length;
-    int resolved = tickets.where((t) => t['status'] == 'Selesai').length;
-    int cancelled = tickets.where((t) => t['status'] == 'Dibatalkan').length;
+  Widget _buildBody(BuildContext context, List<Map<String, dynamic>> stats, List<Map<String, dynamic>> recentTickets, String role) {
+    int total = stats.length;
+    int openCount = stats.where((t) => t['status'] == 'Menunggu Antrean' || t['status'] == 'Dalam Antrean').length;
+    int assigned = stats.where((t) => t['status'] == 'Ditugaskan').length;
+    int inProgress = stats.where((t) => t['status'] == 'Sedang Diproses').length;
+    int resolved = stats.where((t) => t['status'] == 'Selesai').length;
+    int cancelled = stats.where((t) => t['status'] == 'Dibatalkan').length;
 
-    int totalDitugaskan = tickets.length;
+    int totalDitugaskan = stats.length;
     int menungguDiterima = assigned;
-
-    // Show up to 5 recent tickets on the dashboard
-    final recentTickets = tickets.take(5).toList();
 
     return SafeArea(
       child: CustomScrollView(
@@ -148,7 +170,7 @@ class _DashboardPageState extends State<DashboardPage> {
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('AIRLANGGA NEXUS', style: GoogleFonts.plusJakartaSans(fontSize: 10, fontWeight: FontWeight.w800, color: AppTheme.textSecondary, letterSpacing: 0.5)),
+                      Text('AIRLANGGA NEXUS', style: GoogleFonts.plusJakartaSans(fontSize: 10, fontWeight: FontWeight.w800, color: context.appTextSecondary, letterSpacing: 0.5)),
                       Text('Helpdesk UNAIR', style: GoogleFonts.plusJakartaSans(fontSize: 18, fontWeight: FontWeight.w800, color: AppTheme.primaryDark)),
                     ],
                   ),
@@ -242,18 +264,18 @@ class _DashboardPageState extends State<DashboardPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Tiket Terbaru', style: GoogleFonts.plusJakartaSans(fontSize: 18, fontWeight: FontWeight.w800, color: AppTheme.textPrimary)),
+                  Text('Tiket Terbaru', style: GoogleFonts.plusJakartaSans(fontSize: 18, fontWeight: FontWeight.w800, color: context.appTextPrimary)),
                   const SizedBox(height: 12),
                   // Search bar
                   Container(
                     height: 48,
                     padding: const EdgeInsets.symmetric(horizontal: 16),
-                    decoration: BoxDecoration(color: AppTheme.inputFill, borderRadius: BorderRadius.circular(AppTheme.radiusPill)),
+                    decoration: BoxDecoration(color: context.appInputFill, borderRadius: BorderRadius.circular(AppTheme.radiusPill)),
                     child: Row(
                       children: [
-                        Icon(Icons.search_rounded, color: AppTheme.textMuted, size: 20),
+                        Icon(Icons.search_rounded, color: context.appTextMuted, size: 20),
                         const SizedBox(width: 10),
-                        Text('Cari nomor tiket atau keluhan...', style: TextStyle(color: AppTheme.textMuted, fontSize: 13)),
+                        Text('Cari nomor tiket atau keluhan...', style: TextStyle(color: context.appTextMuted, fontSize: 13)),
                       ],
                     ),
                   ),
@@ -272,7 +294,7 @@ class _DashboardPageState extends State<DashboardPage> {
                     children: [
                       Icon(Icons.inbox_rounded, size: 56, color: Colors.grey[300]),
                       const SizedBox(height: 12),
-                      Text('Belum ada tiket.', style: TextStyle(color: AppTheme.textMuted)),
+                      Text('Belum ada tiket.', style: TextStyle(color: context.appTextMuted)),
                     ],
                   ),
                 ),
@@ -324,9 +346,9 @@ class _StatCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: context.appCardColor,
         borderRadius: BorderRadius.circular(24),
-        boxShadow: AppTheme.cardShadow,
+        boxShadow: context.appCardShadow,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -338,9 +360,9 @@ class _StatCard extends StatelessWidget {
             child: Icon(icon, color: iconColor, size: 18),
           ),
           const Spacer(),
-          Text(title, style: GoogleFonts.plusJakartaSans(fontSize: 10, fontWeight: FontWeight.w700, color: AppTheme.textSecondary, letterSpacing: 0.5)),
+          Text(title, style: GoogleFonts.plusJakartaSans(fontSize: 10, fontWeight: FontWeight.w700, color: context.appTextSecondary, letterSpacing: 0.5)),
           const SizedBox(height: 2),
-          Text(count, style: GoogleFonts.plusJakartaSans(fontSize: 24, fontWeight: FontWeight.w800, color: AppTheme.textPrimary)),
+          Text(count, style: GoogleFonts.plusJakartaSans(fontSize: 24, fontWeight: FontWeight.w800, color: context.appTextPrimary)),
         ],
       ),
     );
@@ -390,9 +412,9 @@ class _TicketCard extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: context.appCardColor,
         borderRadius: BorderRadius.circular(24),
-        boxShadow: AppTheme.cardShadow,
+        boxShadow: context.appCardShadow,
       ),
       child: InkWell(
         borderRadius: BorderRadius.circular(24),
@@ -416,7 +438,7 @@ class _TicketCard extends StatelessWidget {
                 children: [
                   Row(
                     children: [
-                      Text(shortId, style: TextStyle(fontSize: 11, color: AppTheme.textSecondary, fontWeight: FontWeight.w700)),
+                      Text(shortId, style: TextStyle(fontSize: 11, color: context.appTextSecondary, fontWeight: FontWeight.w700)),
                       const SizedBox(width: 8),
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
@@ -426,17 +448,18 @@ class _TicketCard extends StatelessWidget {
                     ],
                   ),
                   const SizedBox(height: 6),
-                  Text(title, style: GoogleFonts.plusJakartaSans(fontSize: 15, fontWeight: FontWeight.w800, color: AppTheme.textPrimary, height: 1.3), maxLines: 2, overflow: TextOverflow.ellipsis),
+                  Text(title, style: GoogleFonts.plusJakartaSans(fontSize: 15, fontWeight: FontWeight.w800, color: context.appTextPrimary, height: 1.3), maxLines: 2, overflow: TextOverflow.ellipsis),
                   const SizedBox(height: 4),
-                  Text('Terakhir diperbarui: $timeAgo', style: TextStyle(fontSize: 11, color: AppTheme.textMuted)),
+                  Text('Terakhir diperbarui: $timeAgo', style: TextStyle(fontSize: 11, color: context.appTextMuted)),
                 ],
               ),
             ),
             const SizedBox(width: 8),
-            Icon(Icons.chevron_right_rounded, color: AppTheme.textMuted),
+            Icon(Icons.chevron_right_rounded, color: context.appTextMuted),
           ],
         ),
       ),
     );
   }
 }
+

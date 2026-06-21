@@ -182,8 +182,98 @@ class AppTheme {
     );
   }
 
-  // ─── Dark Theme (Optional, matching structure) ──────────────────
+  // ─── Dark Theme ───────────────────────────────────────────────
   static ThemeData get darkTheme {
-    return lightTheme; // Keeping light theme structure, can be adjusted later if needed
+    final colorScheme = ColorScheme.fromSeed(
+      seedColor: primary,
+      brightness: Brightness.dark,
+      primary: primary,
+      surface: darkBg,
+    );
+
+    return ThemeData(
+      useMaterial3: true,
+      brightness: Brightness.dark,
+      colorScheme: colorScheme,
+      scaffoldBackgroundColor: darkBg,
+      textTheme: GoogleFonts.plusJakartaSansTextTheme().apply(bodyColor: Colors.white, displayColor: Colors.white),
+      appBarTheme: AppBarTheme(
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        centerTitle: false,
+        backgroundColor: darkBg,
+        surfaceTintColor: Colors.transparent,
+        titleTextStyle: GoogleFonts.plusJakartaSans(
+          fontSize: 18,
+          fontWeight: FontWeight.w700,
+          color: Colors.white,
+        ),
+        iconTheme: const IconThemeData(color: Colors.white),
+      ),
+      cardTheme: CardThemeData(
+        elevation: 0,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(radiusMd)),
+        color: darkCard,
+        surfaceTintColor: Colors.transparent,
+      ),
+      inputDecorationTheme: InputDecorationTheme(
+        filled: true,
+        fillColor: darkInputFill,
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide.none,
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide.none,
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: primary, width: 1.5),
+        ),
+        errorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: statusCancelled, width: 1.5),
+        ),
+        prefixIconColor: Colors.white70,
+        suffixIconColor: Colors.white70,
+        labelStyle: GoogleFonts.plusJakartaSans(color: Colors.white70, fontWeight: FontWeight.w500, fontSize: 14),
+        hintStyle: GoogleFonts.plusJakartaSans(color: Colors.white54, fontSize: 14),
+      ),
+      elevatedButtonTheme: ElevatedButtonThemeData(
+        style: ElevatedButton.styleFrom(
+          backgroundColor: primary,
+          foregroundColor: Colors.white,
+          elevation: 0,
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          textStyle: GoogleFonts.plusJakartaSans(fontSize: 15, fontWeight: FontWeight.w700),
+        ),
+      ),
+      bottomNavigationBarTheme: const BottomNavigationBarThemeData(
+        backgroundColor: darkCard,
+        selectedItemColor: primary,
+        unselectedItemColor: Colors.white54,
+        type: BottomNavigationBarType.fixed,
+        elevation: 20,
+      ),
+    );
   }
 }
+
+extension AppThemeExt on BuildContext {
+  bool get isDark => Theme.of(this).brightness == Brightness.dark;
+
+  Color get appBackground => isDark ? AppTheme.darkBg : AppTheme.background;
+  Color get appCardColor => isDark ? AppTheme.darkCard : AppTheme.cardColor;
+  Color get appTextPrimary => isDark ? Colors.white : AppTheme.textPrimary;
+  Color get appTextSecondary => isDark ? Colors.white70 : AppTheme.textSecondary;
+  Color get appTextMuted => isDark ? Colors.white54 : AppTheme.textMuted;
+  Color get appInputFill => isDark ? AppTheme.darkInputFill : AppTheme.inputFill;
+  Color get appBorder => isDark ? AppTheme.darkBorder : AppTheme.border;
+  
+  List<BoxShadow> get appCardShadow => isDark ? [] : AppTheme.cardShadow;
+  List<BoxShadow> get appSoftShadow => isDark ? [] : AppTheme.softShadow;
+}
+

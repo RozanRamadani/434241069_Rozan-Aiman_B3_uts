@@ -8,12 +8,34 @@ class TicketBloc extends Bloc<TicketEvent, TicketState> {
 
   TicketBloc({required this.ticketRepository}) : super(TicketInitial()) {
     on<FetchTickets>((event, emit) async {
-      emit(TicketLoading());
-      // ✅ Menggunakan statusFilter sebagai pengganti isActive (FR-011)
-      final result = await ticketRepository.getTickets(statusFilter: event.statusFilter, helpdeskFilter: event.helpdeskFilter);
+      if (!event.isLoadMore) {
+        emit(TicketLoading());
+      }
+      
+      final result = await ticketRepository.getTickets(
+        statusFilter: event.statusFilter, 
+        helpdeskFilter: event.helpdeskFilter,
+        cursor: event.cursor,
+        limit: 20,
+      );
+      
       result.fold(
-        (failure) => emit(TicketError(failure.message)),
-        (tickets) => emit(TicketsLoaded(tickets)),
+        (failure) {
+          if (!event.isLoadMore) {
+            emit(TicketError(failure.message));
+          } else if (state is TicketsLoaded) {
+            final currentState = state as TicketsLoaded;
+            emit(TicketsLoaded(currentState.tickets, hasMore: currentState.hasMore));
+          }
+        },
+        (newTickets) {
+          if (event.isLoadMore && state is TicketsLoaded) {
+            final currentTickets = (state as TicketsLoaded).tickets;
+            emit(TicketsLoaded([...currentTickets, ...newTickets], hasMore: newTickets.length == 20));
+          } else {
+            emit(TicketsLoaded(newTickets, hasMore: newTickets.length == 20));
+          }
+        },
       );
     });
 
@@ -94,3 +116,4 @@ class TicketBloc extends Bloc<TicketEvent, TicketState> {
     });
   }
 }
+

@@ -1,4 +1,4 @@
-﻿import '../../domain/entities/ticket_history.dart';
+import '../../domain/entities/ticket_history.dart';
 
 class TicketHistoryModel extends TicketHistory {
   TicketHistoryModel({
@@ -23,3 +23,4 @@ class TicketHistoryModel extends TicketHistory {
     );
   }
 }
+

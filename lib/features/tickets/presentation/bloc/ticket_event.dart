@@ -12,10 +12,13 @@ abstract class TicketEvent extends Equatable {
 class FetchTickets extends TicketEvent {
   final String? statusFilter;
   final String? helpdeskFilter;
-  const FetchTickets({this.statusFilter, this.helpdeskFilter});
+  final DateTime? cursor;
+  final bool isLoadMore;
+  
+  const FetchTickets({this.statusFilter, this.helpdeskFilter, this.cursor, this.isLoadMore = false});
 
   @override
-  List<Object?> get props => [statusFilter, helpdeskFilter];
+  List<Object?> get props => [statusFilter, helpdeskFilter, cursor, isLoadMore];
 }
 
 class CreateTicketEvent extends TicketEvent {
@@ -86,3 +89,4 @@ class DeleteTicketEvent extends TicketEvent {
 }
 
 class FetchHelpdesksEvent extends TicketEvent {}
+

@@ -43,3 +43,4 @@ class UpdateProfileRequested extends AuthEvent {
   @override
   List<Object?> get props => [fullName, avatarPath];
 }
+

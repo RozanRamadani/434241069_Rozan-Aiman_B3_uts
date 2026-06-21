@@ -66,7 +66,7 @@ class _NotificationPageState extends State<NotificationPage> {
               ? Center(child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
                   Icon(Icons.notifications_off_outlined, size: 56, color: Colors.grey[300]),
                   const SizedBox(height: 16),
-                  Text('Belum ada notifikasi.', style: TextStyle(color: AppTheme.textMuted)),
+                  Text('Belum ada notifikasi.', style: TextStyle(color: context.appTextMuted)),
                 ]))
               : RefreshIndicator(
                   onRefresh: _fetchNotifications,
@@ -82,7 +82,11 @@ class _NotificationPageState extends State<NotificationPage> {
                       final message = item['message'] ?? '';
 
                       return Container(
-                        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(AppTheme.radiusLg), boxShadow: AppTheme.softShadow),
+                        decoration: BoxDecoration(
+                          color: item['is_read'] == true ? Colors.white : AppTheme.primary.withValues(alpha: 0.05), 
+                          borderRadius: BorderRadius.circular(AppTheme.radiusLg), 
+                          boxShadow: context.appSoftShadow
+                        ),
                         child: Material(
                           color: Colors.transparent,
                           child: InkWell(
@@ -102,11 +106,15 @@ class _NotificationPageState extends State<NotificationPage> {
                                 const SizedBox(width: 14),
                                 Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                                   Row(children: [
-                                    Expanded(child: Text(title, style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w700, fontSize: 14, color: item['is_read'] == true ? AppTheme.textSecondary : AppTheme.textPrimary), maxLines: 1, overflow: TextOverflow.ellipsis)),
-                                    Text(_timeAgo(time), style: TextStyle(fontSize: 11, color: AppTheme.primaryDark, fontWeight: FontWeight.w600)),
+                                    if (item['is_read'] != true) ...[
+                                      Container(width: 8, height: 8, decoration: const BoxDecoration(color: AppTheme.primary, shape: BoxShape.circle)),
+                                      const SizedBox(width: 6),
+                                    ],
+                                    Expanded(child: Text(title, style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w700, fontSize: 14, color: item['is_read'] == true ? context.appTextSecondary : context.appTextPrimary), maxLines: 1, overflow: TextOverflow.ellipsis)),
+                                    Text(_timeAgo(time), style: TextStyle(fontSize: 11, color: item['is_read'] == true ? context.appTextMuted : AppTheme.primaryDark, fontWeight: FontWeight.w600)),
                                   ]),
                                   const SizedBox(height: 4),
-                                  Text(message, style: TextStyle(fontSize: 13, color: AppTheme.textSecondary), maxLines: 2, overflow: TextOverflow.ellipsis),
+                                  Text(message, style: TextStyle(fontSize: 13, color: context.appTextSecondary), maxLines: 2, overflow: TextOverflow.ellipsis),
                                   const SizedBox(height: 4),
                                   Text('Tiket: $ticketTitle', style: TextStyle(fontSize: 11, color: AppTheme.primaryDark, fontWeight: FontWeight.w600), maxLines: 1, overflow: TextOverflow.ellipsis),
                                 ])),
@@ -135,3 +143,4 @@ class _NotificationPageState extends State<NotificationPage> {
     } catch (e) { if (mounted) Navigator.pop(context); }
   }
 }
+

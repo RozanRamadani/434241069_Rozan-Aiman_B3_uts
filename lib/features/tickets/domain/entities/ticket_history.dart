@@ -1,4 +1,4 @@
-﻿class TicketHistory {
+class TicketHistory {
   final String id;
   final String ticketId;
   final String? userId; // User atau Admin yang merubah
@@ -17,3 +17,4 @@
     required this.changedAt,
   });
 }
+

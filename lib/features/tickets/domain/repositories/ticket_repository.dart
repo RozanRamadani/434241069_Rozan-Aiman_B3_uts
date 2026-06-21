@@ -6,7 +6,7 @@ import '../entities/ticket.dart';
 import '../entities/ticket_history.dart';
 
 abstract class TicketRepository {
-  Future<Either<Failure, List<Ticket>>> getTickets({String? statusFilter, String? helpdeskFilter});
+  Future<Either<Failure, List<Ticket>>> getTickets({String? statusFilter, String? helpdeskFilter, DateTime? cursor, int limit = 20});
   Future<Either<Failure, Ticket>> getTicketById(String ticketId);
   Future<Either<Failure, Ticket>> createTicket(Ticket ticket, {File? imageFile, dynamic imageBytes, String? imageExt});
   Future<Either<Failure, void>> updateStatus(String ticketId, String status);
@@ -20,5 +20,6 @@ abstract class TicketRepository {
   Future<Either<Failure, List<Map<String, dynamic>>>> getHelpdesks();
   Future<Either<Failure, List<TicketHistory>>> getTicketHistory(String ticketId);
 }
+
 
 

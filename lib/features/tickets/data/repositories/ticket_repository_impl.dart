@@ -16,9 +16,9 @@ class TicketRepositoryImpl implements TicketRepository {
   final Duration _timeout = const Duration(seconds: 10);
 
   @override
-  Future<Either<Failure, List<Ticket>>> getTickets({String? statusFilter, String? helpdeskFilter}) async {
+  Future<Either<Failure, List<Ticket>>> getTickets({String? statusFilter, String? helpdeskFilter, DateTime? cursor, int limit = 20}) async {
     try {
-      final result = await dataSource.getTickets(statusFilter: statusFilter, helpdeskFilter: helpdeskFilter).timeout(_timeout);
+      final result = await dataSource.getTickets(statusFilter: statusFilter, helpdeskFilter: helpdeskFilter, cursor: cursor, limit: limit).timeout(_timeout);
       return Right(result);
     } on TimeoutException {
       return Left(ServerFailure('Waktu tunggu habis. Periksa koneksi Anda.'));
@@ -174,4 +174,5 @@ class TicketRepositoryImpl implements TicketRepository {
     }
   }
 }
+
 

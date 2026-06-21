@@ -19,6 +19,21 @@ class AuthRepositoryImpl implements AuthRepository {
         email: email,
         password: password,
       );
+
+      final user = supabaseClient.auth.currentUser;
+      if (user != null) {
+        final profile = await supabaseClient
+            .from('profiles')
+            .select('is_active')
+            .eq('id', user.id)
+            .single();
+
+        if (profile['is_active'] == false) {
+          await supabaseClient.auth.signOut();
+          return Left(ServerFailure('Akun Anda telah dinonaktifkan oleh Admin. Hubungi administrator.'));
+        }
+      }
+
       return const Right(null);
     } on supabase.AuthException catch (e) {
       return Left(ServerFailure(e.message));
@@ -123,3 +138,4 @@ class AuthRepositoryImpl implements AuthRepository {
     await supabaseClient.auth.signOut();
   }
 }
+
