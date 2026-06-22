@@ -24,6 +24,24 @@ class SupabaseTicketRemoteDataSourceImpl implements TicketRemoteDataSource {
   final SupabaseClient client;
   SupabaseTicketRemoteDataSourceImpl(this.client);
 
+  Future<void> _insertNotification({
+    required String userId,
+    required String ticketId,
+    required String title,
+    required String message,
+  }) async {
+    final currentUser = client.auth.currentUser;
+    if (currentUser != null && userId == currentUser.id) return;
+
+    await client.from('notifications').insert({
+      'user_id': userId,
+      'ticket_id': ticketId,
+      'title': title,
+      'message': message,
+      'is_read': false,
+    });
+  }
+
   @override
   Future<List<TicketHistoryModel>> getTicketHistory(String ticketId) async {
     // We don't join auth because it's tricky with RLS on 'auth.users' from public, 
@@ -161,6 +179,18 @@ class SupabaseTicketRemoteDataSourceImpl implements TicketRemoteDataSource {
       'attachment_url': url,
     }).select().single();
     
+    final admins = await client.from('profiles').select('id').eq('role', 'admin');
+    final currentUserFullName = client.auth.currentUser?.userMetadata?['full_name'] ?? 'Seseorang';
+    
+    for (var admin in admins) {
+      await _insertNotification(
+        userId: admin['id'],
+        ticketId: data['id'],
+        title: 'Tiket Baru Masuk',
+        message: '$currentUserFullName membuat tiket baru: \'${ticket.title}\'',
+      );
+    }
+    
     return TicketModel.fromJson(data);
   }
 
@@ -185,6 +215,30 @@ class SupabaseTicketRemoteDataSourceImpl implements TicketRemoteDataSource {
       'user_id': user.id,
       'message': message,
     });
+
+    final ticketData = await client.from('tickets').select('user_id, assigned_to, title').eq('id', ticketId).single();
+    final role = user.userMetadata?['role'] ?? 'user';
+    final senderName = user.userMetadata?['full_name'] ?? 'Seseorang';
+
+    if (role == 'helpdesk' || role == 'admin') {
+      if (ticketData['user_id'] != null) {
+        await _insertNotification(
+          userId: ticketData['user_id'],
+          ticketId: ticketId,
+          title: 'Balasan Baru',
+          message: '$senderName membalas tiket \'${ticketData['title']}\'',
+        );
+      }
+    } else {
+      if (ticketData['assigned_to'] != null) {
+        await _insertNotification(
+          userId: ticketData['assigned_to'],
+          ticketId: ticketId,
+          title: 'Pesan Baru dari User',
+          message: '$senderName membalas di tiket \'${ticketData['title']}\'',
+        );
+      }
+    }
   }
 
   @override
@@ -208,12 +262,21 @@ class SupabaseTicketRemoteDataSourceImpl implements TicketRemoteDataSource {
 
     final ticketData = data.first;
 
-    await client.from('notifications').insert({
-      'user_id': helpdeskId,
-      'ticket_id': ticketId,
-      'title': 'Tiket Baru Ditugaskan',
-      'message': 'Tiket "${ticketData['title']}" telah ditugaskan kepada Anda.',
-    });
+    await _insertNotification(
+      userId: helpdeskId,
+      ticketId: ticketId,
+      title: 'Tiket Baru Ditugaskan',
+      message: 'Anda mendapat tiket baru: \'${ticketData['title']}\'',
+    );
+    
+    if (ticketData['user_id'] != null) {
+      await _insertNotification(
+        userId: ticketData['user_id'],
+        ticketId: ticketId,
+        title: 'Tiket Sedang Ditangani',
+        message: 'Tiket \'${ticketData['title']}\' telah ditugaskan kepada $helpdeskName',
+      );
+    }
   }
 
   @override
@@ -224,6 +287,18 @@ class SupabaseTicketRemoteDataSourceImpl implements TicketRemoteDataSource {
     }).eq('id', ticketId).select();
     if (data.isEmpty) {
       throw 'Akses Ditolak: Tidak dapat menerima tiket ini.';
+    }
+
+    final ticketData = data.first;
+    final helpdeskName = client.auth.currentUser?.userMetadata?['full_name'] ?? 'Helpdesk';
+    
+    if (ticketData['user_id'] != null) {
+      await _insertNotification(
+        userId: ticketData['user_id'],
+        ticketId: ticketId,
+        title: 'Tiket Sedang Diproses',
+        message: 'Tiket \'${ticketData['title']}\' sedang diproses oleh $helpdeskName',
+      );
     }
   }
 
@@ -236,6 +311,28 @@ class SupabaseTicketRemoteDataSourceImpl implements TicketRemoteDataSource {
     if (data.isEmpty) {
       throw 'Akses Ditolak: Tidak dapat menyelesaikan tiket ini.';
     }
+
+    final ticketData = data.first;
+    final helpdeskName = client.auth.currentUser?.userMetadata?['full_name'] ?? 'Helpdesk';
+
+    if (ticketData['user_id'] != null) {
+      await _insertNotification(
+        userId: ticketData['user_id'],
+        ticketId: ticketId,
+        title: 'Tiket Selesai ✓',
+        message: 'Tiket \'${ticketData['title']}\' telah berhasil diselesaikan',
+      );
+    }
+    
+    final admins = await client.from('profiles').select('id').eq('role', 'admin');
+    for (var admin in admins) {
+      await _insertNotification(
+        userId: admin['id'],
+        ticketId: ticketId,
+        title: 'Tiket Diselesaikan',
+        message: '$helpdeskName telah menyelesaikan tiket \'${ticketData['title']}\'',
+      );
+    }
   }
 
   @override
@@ -246,6 +343,16 @@ class SupabaseTicketRemoteDataSourceImpl implements TicketRemoteDataSource {
     
     if (data.isEmpty) {
       throw 'Akses Ditolak: Tidak dapat membatalkan tiket ini.';
+    }
+
+    final ticketData = data.first;
+    if (ticketData['user_id'] != null) {
+      await _insertNotification(
+        userId: ticketData['user_id'],
+        ticketId: ticketId,
+        title: 'Tiket Dibatalkan',
+        message: 'Tiket \'${ticketData['title']}\' telah dibatalkan',
+      );
     }
   }
 

@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:intl/intl.dart';
 import 'package:tiketdotcom/core/theme/app_theme.dart';
-import '../../data/models/ticket_model.dart';
+import '../../domain/repositories/ticket_repository.dart';
 import 'ticket_detail_page.dart';
 
 class NotificationPage extends StatefulWidget {
@@ -43,6 +44,18 @@ class _NotificationPageState extends State<NotificationPage> {
     }
   }
 
+  Future<void> _markAllAsRead() async {
+    final userId = supabase.auth.currentUser?.id;
+    if (userId == null) return;
+    
+    try {
+      await supabase.from('notifications').update({'is_read': true}).eq('user_id', userId).eq('is_read', false);
+      _fetchNotifications();
+    } catch (e) {
+      debugPrint('Error mark all as read: $e');
+    }
+  }
+
   String _timeAgo(DateTime time) {
     final diff = DateTime.now().difference(time);
     if (diff.inMinutes < 1) return 'Just now';
@@ -57,6 +70,7 @@ class _NotificationPageState extends State<NotificationPage> {
       appBar: AppBar(
         title: Text('Notifikasi', style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w700)),
         actions: [
+          IconButton(icon: const Icon(Icons.done_all_rounded), tooltip: 'Tandai semua dibaca', onPressed: _markAllAsRead),
           IconButton(icon: const Icon(Icons.refresh_rounded), onPressed: () { setState(() => _isLoading = true); _fetchNotifications(); }),
         ],
       ),
@@ -130,17 +144,25 @@ class _NotificationPageState extends State<NotificationPage> {
   }
 
   Future<void> _navigateToTicket(Map<String, dynamic> item) async {
-    final ticketData = item['tickets'];
-    if (ticketData == null) return;
+    final ticketId = item['ticket_id'];
+    if (ticketId == null) return;
+    
     showDialog(context: context, barrierDismissible: false, builder: (_) => const Center(child: CircularProgressIndicator()));
     try {
+      final eitherResult = await context.read<TicketRepository>().getTicketById(ticketId);
+      if (mounted) {
+        Navigator.pop(context); // Dismiss loading
+        eitherResult.fold(
+          (failure) => ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Gagal memuat tiket: ${failure.message}'))),
+          (ticket) => Navigator.push(context, MaterialPageRoute(builder: (_) => TicketDetailPage(ticket: ticket))),
+        );
+      }
+    } catch (e) {
       if (mounted) {
         Navigator.pop(context);
-        Navigator.push(context, MaterialPageRoute(builder: (_) => TicketDetailPage(
-          ticket: TicketModel.fromJson(ticketData),
-        )));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Gagal memuat tiket: $e')));
       }
-    } catch (e) { if (mounted) Navigator.pop(context); }
+    }
   }
 }
 

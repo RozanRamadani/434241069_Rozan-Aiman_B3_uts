@@ -23,20 +23,80 @@ class _CreateTicketPageState extends State<CreateTicketPage> {
   final _formKey = GlobalKey<FormState>();
   final _titleController = TextEditingController();
   final _descriptionController = TextEditingController();
-  String _selectedCategory = 'Jaringan & Internet';
+  String _selectedCategory = '';
   String _selectedPriority = 'Sedang'; // For UI only, as model might not have priority right now.
   XFile? _selectedImage;
   Uint8List? _imageBytes;
 
-  final List<Map<String, dynamic>> _categories = [
-    {'id': 'Jaringan & Internet', 'icon': Icons.wifi_rounded},
-    {'id': 'Akun & Login', 'icon': Icons.account_circle_rounded},
-    {'id': 'Hardware', 'icon': Icons.computer_rounded},
-    {'id': 'Lainnya', 'icon': Icons.grid_view_rounded},
-  ];
+  List<Map<String, dynamic>> _categories = [];
+  bool _isLoadingCategories = true;
 
   final List<String> _priorities = ['Rendah', 'Sedang', 'Tinggi'];
   final _picker = ImagePicker();
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchCategories();
+  }
+
+  Future<void> _fetchCategories() async {
+    try {
+      final data = await Supabase.instance.client
+          .from('categories')
+          .select()
+          .eq('is_active', true)
+          .order('name');
+      
+      if (!mounted) return;
+      
+      setState(() {
+        _categories = List<Map<String, dynamic>>.from(data);
+        if (_categories.isNotEmpty) {
+          _selectedCategory = _categories.first['name'];
+        }
+        _isLoadingCategories = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _isLoadingCategories = false;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Gagal memuat kategori: $e'),
+          backgroundColor: AppTheme.statusCancelled,
+        ),
+      );
+    }
+  }
+
+  IconData _getIconData(String iconName) {
+    switch (iconName) {
+      case 'wifi': return Icons.wifi_rounded;
+      case 'person': return Icons.person_rounded;
+      case 'desktop': return Icons.computer_rounded;
+      case 'grid': return Icons.grid_view_rounded;
+      case 'printer': return Icons.print_rounded;
+      case 'email': return Icons.email_rounded;
+      case 'phone': return Icons.phone_rounded;
+      case 'lock': return Icons.lock_rounded;
+      case 'settings': return Icons.settings_rounded;
+      default: return Icons.help_outline_rounded;
+    }
+  }
+
+  Color _getColorFromHex(String hexColor) {
+    try {
+      hexColor = hexColor.replaceAll('#', '');
+      if (hexColor.length == 6) {
+        hexColor = 'FF$hexColor';
+      }
+      return Color(int.parse('0x$hexColor'));
+    } catch (_) {
+      return const Color(0xFFFF6B35);
+    }
+  }
 
   @override
   void dispose() {
@@ -142,35 +202,51 @@ class _CreateTicketPageState extends State<CreateTicketPage> {
                 // Kategori Masalah
                 Text('Kategori Masalah', style: GoogleFonts.plusJakartaSans(fontSize: 14, fontWeight: FontWeight.w700, color: context.appTextPrimary)),
                 const SizedBox(height: 12),
-                GridView.count(
-                  crossAxisCount: 2,
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  crossAxisSpacing: 12,
-                  mainAxisSpacing: 12,
-                  childAspectRatio: 2.8,
-                  children: _categories.map((cat) {
-                    final isSelected = _selectedCategory == cat['id'];
-                    return GestureDetector(
-                      onTap: () => setState(() => _selectedCategory = cat['id']),
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: isSelected ? const Color(0xFFFFEDD5) : Colors.white,
-                          borderRadius: BorderRadius.circular(24),
-                          border: Border.all(color: isSelected ? Colors.transparent : context.appBorder),
+                if (_isLoadingCategories)
+                  const Center(child: Padding(
+                    padding: EdgeInsets.all(16.0),
+                    child: CircularProgressIndicator(),
+                  ))
+                else if (_categories.isEmpty)
+                  Text('Kategori tidak tersedia', style: TextStyle(color: context.appTextSecondary))
+                else
+                  GridView.count(
+                    crossAxisCount: 2,
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    crossAxisSpacing: 12,
+                    mainAxisSpacing: 12,
+                    childAspectRatio: 2.8,
+                    children: _categories.map((cat) {
+                      final name = cat['name'] as String;
+                      final iconName = cat['icon'] as String;
+                      final hexColor = cat['color'] as String;
+                      final catColor = _getColorFromHex(hexColor);
+                      final isSelected = _selectedCategory == name;
+                      return GestureDetector(
+                        onTap: () => setState(() => _selectedCategory = name),
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: isSelected ? catColor.withValues(alpha: 0.15) : context.appCardColor,
+                            borderRadius: BorderRadius.circular(24),
+                            border: Border.all(color: isSelected ? catColor : context.appBorder),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(_getIconData(iconName), color: isSelected ? catColor : context.appTextSecondary, size: 18),
+                              const SizedBox(width: 8),
+                              Flexible(
+                                child: Text(name, 
+                                  overflow: TextOverflow.ellipsis,
+                                  style: GoogleFonts.plusJakartaSans(fontSize: 12, fontWeight: FontWeight.w700, color: isSelected ? catColor : context.appTextSecondary)),
+                              ),
+                            ],
+                          ),
                         ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(cat['icon'], color: isSelected ? const Color(0xFF9A3412) : context.appTextSecondary, size: 18),
-                            const SizedBox(width: 8),
-                            Text(cat['id'], style: GoogleFonts.plusJakartaSans(fontSize: 12, fontWeight: FontWeight.w700, color: isSelected ? const Color(0xFF9A3412) : context.appTextSecondary)),
-                          ],
-                        ),
-                      ),
-                    );
-                  }).toList(),
-                ),
+                      );
+                    }).toList(),
+                  ),
                 const SizedBox(height: 24),
 
                 // Judul
