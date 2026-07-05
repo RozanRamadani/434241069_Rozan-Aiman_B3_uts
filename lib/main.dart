@@ -21,37 +21,47 @@ late Future<void> supabaseInitializer;
 final ValueNotifier<ThemeMode> themeNotifier = ValueNotifier(ThemeMode.light);
 
 void main() async {
-  WidgetsFlutterBinding.ensureInitialized();
-  await dotenv.load(fileName: ".env");
+  try {
+    WidgetsFlutterBinding.ensureInitialized();
+    await dotenv.load(fileName: ".env");
 
-  // Load theme preference
-  final prefs = await SharedPreferences.getInstance();
-  final isDarkMode = prefs.getBool('isDarkMode') ?? false;
-  themeNotifier.value = isDarkMode ? ThemeMode.dark : ThemeMode.light;
+    // Load theme preference
+    final prefs = await SharedPreferences.getInstance();
+    final isDarkMode = prefs.getBool('isDarkMode') ?? false;
+    themeNotifier.value = isDarkMode ? ThemeMode.dark : ThemeMode.light;
 
-  // Init local notification
-  await NotificationService().init();
+    // Init local notification
+    await NotificationService().init();
 
-  // Tangkap error UI thread
-  FlutterError.onError = (details) {
-    FlutterError.presentError(details);
-    debugPrint('>>> FlutterError: ${details.exceptionAsString()}');
-  };
+    // Tangkap error UI thread
+    FlutterError.onError = (details) {
+      FlutterError.presentError(details);
+      debugPrint('>>> FlutterError: ${details.exceptionAsString()}');
+    };
 
-  // Tangkap error asinkron (Background thread)
-  PlatformDispatcher.instance.onError = (error, stack) {
-    debugPrint('>>> PlatformError: $error');
-    debugPrint('>>> Stack: $stack');
-    return true;
-  };
+    // Tangkap error asinkron (Background thread)
+    PlatformDispatcher.instance.onError = (error, stack) {
+      debugPrint('>>> PlatformError: $error');
+      debugPrint('>>> Stack: $stack');
+      return true;
+    };
 
-  debugPrint('>>> Initializing Supabase...');
-  supabaseInitializer = Supabase.initialize(
-    url: dotenv.env['SUPABASE_URL'] ?? '',
-    anonKey: dotenv.env['SUPABASE_ANON_KEY'] ?? '',
-  );
+    debugPrint('>>> Initializing Supabase...');
+    supabaseInitializer = Supabase.initialize(
+      url: dotenv.env['SUPABASE_URL'] ?? '',
+      anonKey: dotenv.env['SUPABASE_ANON_KEY'] ?? '',
+    );
 
-  runApp(const TicketingApp());
+    runApp(const TicketingApp());
+  } catch (e, stack) {
+    debugPrint('>>> FATAL INIT ERROR: $e');
+    debugPrint('>>> Stacktrace: $stack');
+    runApp(MaterialApp(
+      home: Scaffold(
+        body: Center(child: Text('Fatal Init Error:\n$e')),
+      ),
+    ));
+  }
 }
 
 class TicketingApp extends StatelessWidget {
